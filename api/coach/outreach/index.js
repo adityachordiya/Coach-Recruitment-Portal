@@ -3,7 +3,7 @@ const { requireAuth } = require('../../_lib/auth');
 const { handleCors } = require('../../_lib/cors');
 const { v4: uuidv4 } = require('uuid');
 
-const VALID_METHODS  = ['Instagram DM', 'Text', 'Email', 'In Person'];
+const VALID_METHODS  = ['Instagram DM', 'Text', 'Phone Call', 'Email', 'In Person'];
 const VALID_STATUSES = ['Reached Out', 'Interested', 'Enrolled'];
 const VALID_GRADES   = ['9th', '10th', '11th', '12th', 'Other'];
 

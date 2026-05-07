@@ -4,7 +4,7 @@ import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 
-const CONTACT_METHODS = ['Instagram DM', 'Text', 'Email', 'In Person'];
+const CONTACT_METHODS = ['Instagram DM', 'Text', 'Phone Call', 'Email', 'In Person'];
 const STATUSES        = ['Reached Out', 'Interested', 'Enrolled'];
 const GRADES          = ['9th', '10th', '11th', '12th', 'Other'];
 

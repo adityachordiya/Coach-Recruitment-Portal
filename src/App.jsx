@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import SetupPassword from './pages/SetupPassword';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
+import Resources from './pages/Resources';
 
 export default function App() {
   return (
@@ -19,6 +20,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/resources"
+            element={
+              <ProtectedRoute>
+                <Resources />
               </ProtectedRoute>
             }
           />

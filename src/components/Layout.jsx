@@ -21,16 +21,19 @@ export default function Layout({ children }) {
               <span className="text-crimson font-bold text-lg leading-none">Ascend</span>
               <span className="text-gray-400 text-sm hidden sm:inline">Coach Portal</span>
             </Link>
-            {user?.role === 'owner' && (
-              <div className="flex items-center gap-1">
-                <NavLink to="/dashboard" active={location.pathname === '/dashboard'}>
-                  My Dashboard
-                </NavLink>
+            <div className="flex items-center gap-1">
+              <NavLink to="/dashboard" active={location.pathname === '/dashboard'}>
+                My Dashboard
+              </NavLink>
+              <NavLink to="/resources" active={location.pathname === '/resources'}>
+                Playbook
+              </NavLink>
+              {user?.role === 'owner' && (
                 <NavLink to="/admin" active={location.pathname === '/admin'}>
                   Admin
                 </NavLink>
-              </div>
-            )}
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {user && (

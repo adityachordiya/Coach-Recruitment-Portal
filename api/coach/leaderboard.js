@@ -1,6 +1,7 @@
 const { getPool } = require('../_lib/db');
 const { requireAuth } = require('../_lib/auth');
 const { handleCors } = require('../_lib/cors');
+const { fetchReferralData, getReferrerStats } = require('../_lib/referralData');
 
 module.exports = async function handler(req, res) {
   if (handleCors(req, res)) return;
@@ -14,29 +15,41 @@ module.exports = async function handler(req, res) {
 
   const pool = getPool();
   try {
-    const { rows } = await pool.query(`
-      SELECT
-        r.first_name,
-        r.last_name,
-        r.referral_code,
-        COUNT(hr.id) AS referral_count
+    // Get all coaches with their referral codes
+    const { rows: coaches } = await pool.query(`
+      SELECT r.first_name, r.last_name, r.referral_code
       FROM coach_accounts ca
       JOIN referrers r ON ca.referrer_id = r.id
-      LEFT JOIN hub_referrals hr ON hr.referrer_id = r.id
       WHERE ca.role = 'coach'
-      GROUP BY r.id
-      ORDER BY referral_count DESC
-      LIMIT 1
     `);
 
-    if (rows.length === 0) return res.status(200).json(null);
+    if (coaches.length === 0) return res.status(200).json(null);
 
-    return res.status(200).json({
-      first_name: rows[0].first_name,
-      last_name: rows[0].last_name,
-      referral_code: rows[0].referral_code,
-      referral_count: parseInt(rows[0].referral_count, 10),
-    });
+    // Pull live referral data
+    const data = await fetchReferralData();
+
+    // Find the coach with the most conversions
+    let leader = null;
+    let maxCount = 0;
+
+    for (const coach of coaches) {
+      const stats = getReferrerStats(data, coach.referral_code);
+      const count = stats?.stats.redemption_count ?? 0;
+      if (count > maxCount) {
+        maxCount = count;
+        leader = {
+          first_name: coach.first_name,
+          last_name: coach.last_name,
+          referral_code: coach.referral_code,
+          referral_count: count,
+        };
+      }
+    }
+
+    // Only show a leader if at least one coach has a conversion
+    if (!leader || leader.referral_count === 0) return res.status(200).json(null);
+
+    return res.status(200).json(leader);
   } catch (err) {
     console.error('GET /coach/leaderboard error:', err);
     return res.status(500).json({ error: 'Internal server error' });

@@ -1,0 +1,4 @@
+ALTER TABLE coach_outreach_log
+  ADD COLUMN IF NOT EXISTS grade TEXT,
+  ADD COLUMN IF NOT EXISTS school TEXT,
+  ADD COLUMN IF NOT EXISTS follow_up_date DATE;

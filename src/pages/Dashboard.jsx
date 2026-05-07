@@ -10,18 +10,22 @@ const GRADES          = ['9th', '10th', '11th', '12th', 'Other'];
 
 const EMPTY_FORM = {
   contact_name: '', contact_method: 'Instagram DM',
-  status: 'Reached Out', notes: '', grade: '', school: '', follow_up_date: '',
+  status: 'Reached Out', notes: '', grade: '', school: '',
 };
 
-function todayPlus7() {
-  const d = new Date();
-  d.setDate(d.getDate() + 7);
-  return d.toISOString().split('T')[0];
+const INACTIVE_STATUSES = ['Enrolled', 'Not Interested'];
+
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  const diff = Date.now() - new Date(dateStr).getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
-function isOverdue(follow_up_date, status) {
-  if (!follow_up_date || status === 'Enrolled') return false;
-  return new Date(follow_up_date) < new Date(new Date().toDateString());
+function followUpIndicator(days, status) {
+  if (!days === null || INACTIVE_STATUSES.includes(status)) return null;
+  if (days <= 3)  return { label: `${days}d ago`, color: 'bg-green-100 text-green-700' };
+  if (days <= 6)  return { label: `${days}d ago`, color: 'bg-gold-100 text-yellow-700' };
+  return { label: `${days}d ago — follow up!`, color: 'bg-red-100 text-red-600' };
 }
 
 function formatDate(str) {
@@ -37,7 +41,6 @@ function groupByProspect(rows) {
     if (!map.has(pid)) map.set(pid, []);
     map.get(pid).push(row);
   }
-  // Return sorted: most recent interaction first
   return Array.from(map.entries())
     .map(([pid, interactions]) => {
       const sorted = [...interactions].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -60,16 +63,16 @@ export default function Dashboard() {
   const [submitting,  setSubmitting]  = useState(false);
   const [formError,   setFormError]   = useState('');
 
-  const [expandedId,   setExpandedId]   = useState(null);
-  const [followUpFor,  setFollowUpFor]  = useState(null); // prospect being followed up
-  const [followUpForm, setFollowUpForm] = useState({});
+  const [expandedId,         setExpandedId]         = useState(null);
+  const [followUpFor,        setFollowUpFor]        = useState(null);
+  const [followUpForm,       setFollowUpForm]       = useState({});
   const [followUpSubmitting, setFollowUpSubmitting] = useState(false);
 
   const [editingId,   setEditingId]   = useState(null);
   const [editForm,    setEditForm]    = useState({});
   const [editLoading, setEditLoading] = useState(false);
 
-  const [copied, setCopied] = useState(false);
+  const [copied,       setCopied]       = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterGrade,  setFilterGrade]  = useState('');
 
@@ -99,8 +102,12 @@ export default function Dashboard() {
     return grouped;
   }, [outreach, filterStatus, filterGrade]);
 
-  const overdueCount = useMemo(() =>
-    prospects.filter((p) => isOverdue(p.latest.follow_up_date, p.latest.status)).length,
+  const needFollowUpCount = useMemo(() =>
+    prospects.filter((p) => {
+      if (INACTIVE_STATUSES.includes(p.latest.status)) return false;
+      const days = daysSince(p.latest.created_at);
+      return days !== null && days >= 7;
+    }).length,
     [prospects]
   );
 
@@ -117,10 +124,7 @@ export default function Dashboard() {
     if (!form.contact_name.trim()) { setFormError('Contact name is required.'); return; }
     setSubmitting(true);
     try {
-      const entry = await api.post('/api/coach/outreach', {
-        ...form,
-        follow_up_date: form.follow_up_date || todayPlus7(),
-      });
+      const entry = await api.post('/api/coach/outreach', form);
       setOutreach((prev) => [...prev, entry]);
       setForm(EMPTY_FORM);
       setShowAddForm(false);
@@ -141,7 +145,6 @@ export default function Dashboard() {
       notes:          '',
       grade:          prospect.latest.grade  || '',
       school:         prospect.latest.school || '',
-      follow_up_date: todayPlus7(),
       prospect_id:    prospect.prospect_id,
     });
   }
@@ -163,11 +166,10 @@ export default function Dashboard() {
   function startEdit(entry) {
     setEditingId(entry.id);
     setEditForm({
-      status:         entry.status,
-      notes:          entry.notes          || '',
-      grade:          entry.grade          || '',
-      school:         entry.school         || '',
-      follow_up_date: entry.follow_up_date ? entry.follow_up_date.split('T')[0] : '',
+      status: entry.status,
+      notes:  entry.notes  || '',
+      grade:  entry.grade  || '',
+      school: entry.school || '',
     });
   }
 
@@ -236,21 +238,21 @@ export default function Dashboard() {
           <p className="text-xs text-gray-400 mt-2">Students who signed up using your referral code.</p>
         </div>
 
-        <div className={`rounded-2xl border p-6 ${overdueCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Follow-ups Overdue</p>
+        <div className={`rounded-2xl border p-6 ${needFollowUpCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Need Follow-up</p>
           <div className="flex items-end gap-2">
-            <span className={`text-3xl font-bold ${overdueCount > 0 ? 'text-red-500' : 'text-gray-300'}`}>
-              {loadingData ? '—' : overdueCount}
+            <span className={`text-3xl font-bold ${needFollowUpCount > 0 ? 'text-red-500' : 'text-gray-300'}`}>
+              {loadingData ? '—' : needFollowUpCount}
             </span>
             <span className="text-gray-400 text-sm mb-1">prospects</span>
           </div>
           <p className="text-xs text-gray-400 mt-2">
-            {overdueCount > 0 ? 'Check below for overdue follow-ups.' : "You're all caught up!"}
+            {needFollowUpCount > 0 ? 'No contact in 7+ days.' : "You're all caught up!"}
           </p>
         </div>
       </div>
 
-      {/* Prospects / Outreach Log */}
+      {/* Prospects */}
       <div className="bg-white rounded-2xl border border-gray-200">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="font-semibold text-gray-900">Prospects</h2>
@@ -303,14 +305,6 @@ export default function Dashboard() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Follow-up Date <span className="text-gray-400 font-normal">(auto: +7 days)</span>
-                </label>
-                <input type="date" value={form.follow_up_date}
-                  onChange={(e) => setForm({ ...form, follow_up_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson focus:border-transparent" />
-              </div>
-              <div className="sm:col-span-2 lg:col-span-3">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
                 <input type="text" value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
@@ -360,14 +354,15 @@ export default function Dashboard() {
           <div className="divide-y divide-gray-100">
             {prospects.map((prospect) => {
               const { prospect_id, interactions, latest } = prospect;
-              const overdue = isOverdue(latest.follow_up_date, latest.status);
+              const days      = daysSince(latest.created_at);
+              const indicator = followUpIndicator(days, latest.status);
+              const needsFollowUp = indicator?.color.includes('red');
               const isExpanded = expandedId === prospect_id;
 
               return (
                 <div key={prospect_id}>
-                  {/* Prospect Row */}
                   <div
-                    className={`flex items-center gap-4 px-6 py-4 cursor-pointer hover:bg-gray-50 transition ${overdue ? 'bg-red-50 hover:bg-red-100' : ''}`}
+                    className={`flex items-center gap-4 px-6 py-4 cursor-pointer hover:bg-gray-50 transition ${needsFollowUp ? 'bg-red-50 hover:bg-red-100' : ''}`}
                     onClick={() => setExpandedId(isExpanded ? null : prospect_id)}
                   >
                     <div className="flex-1 min-w-0">
@@ -375,25 +370,23 @@ export default function Dashboard() {
                         <span className="font-semibold text-gray-900">{latest.contact_name}</span>
                         {latest.grade && <span className="badge bg-gray-100 text-gray-600">{latest.grade}</span>}
                         <StatusBadge status={latest.status} />
-                        {overdue && <span className="badge bg-red-100 text-red-600">⚠ Follow-up overdue</span>}
+                        {indicator && (
+                          <span className={`badge ${indicator.color}`}>{indicator.label}</span>
+                        )}
                       </div>
                       <div className="flex gap-3 mt-0.5 text-xs text-gray-400 flex-wrap">
                         {latest.school && <span>{latest.school}</span>}
                         <span>{interactions.length} {interactions.length === 1 ? 'interaction' : 'interactions'}</span>
-                        {latest.follow_up_date && (
-                          <span className={overdue ? 'text-red-500 font-medium' : ''}>
-                            Follow up {formatDate(latest.follow_up_date)}
-                          </span>
-                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openFollowUp(prospect); }}
-                        className="text-xs font-medium text-crimson border border-crimson px-3 py-1.5 rounded-lg hover:bg-crimson hover:text-white transition"
-                      >
-                        Log Follow-up
-                      </button>
+                      {!INACTIVE_STATUSES.includes(latest.status) && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openFollowUp(prospect); }}
+                          className="text-xs font-medium text-crimson border border-crimson px-3 py-1.5 rounded-lg hover:bg-crimson hover:text-white transition">
+                          Log Follow-up
+                        </button>
+                      )}
                       <svg className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                         fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -401,7 +394,7 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Expanded: Interaction Timeline */}
+                  {/* Interaction Timeline */}
                   {isExpanded && (
                     <div className="px-6 pb-4 bg-gray-50 border-t border-gray-100">
                       <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-4 mb-3">
@@ -422,12 +415,6 @@ export default function Dashboard() {
                                     </select>
                                   </div>
                                   <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Follow-up Date</label>
-                                    <input type="date" value={editForm.follow_up_date}
-                                      onChange={(e) => setEditForm({ ...editForm, follow_up_date: e.target.value })}
-                                      className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson" />
-                                  </div>
-                                  <div className="sm:col-span-2">
                                     <label className="block text-xs font-medium text-gray-500 mb-1">Notes</label>
                                     <input type="text" value={editForm.notes}
                                       onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
@@ -448,7 +435,6 @@ export default function Dashboard() {
                               </div>
                             ) : (
                               <div className="flex items-start gap-3">
-                                {/* Timeline dot */}
                                 <div className="flex flex-col items-center mt-1 shrink-0">
                                   <div className={`w-2.5 h-2.5 rounded-full ${idx === interactions.length - 1 ? 'bg-crimson' : 'bg-gray-300'}`} />
                                   {idx < interactions.length - 1 && <div className="w-px h-full min-h-6 bg-gray-200 mt-1" />}
@@ -463,14 +449,7 @@ export default function Dashboard() {
                                     <button onClick={() => startEdit(entry)}
                                       className="text-xs text-gray-400 hover:text-crimson transition">Edit</button>
                                   </div>
-                                  {entry.notes && (
-                                    <p className="text-sm text-gray-600 mt-1.5">{entry.notes}</p>
-                                  )}
-                                  {entry.follow_up_date && (
-                                    <p className={`text-xs mt-1 ${isOverdue(entry.follow_up_date, entry.status) ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
-                                      Follow up {formatDate(entry.follow_up_date)}
-                                    </p>
-                                  )}
+                                  {entry.notes && <p className="text-sm text-gray-600 mt-1.5">{entry.notes}</p>}
                                 </div>
                               </div>
                             )}
@@ -499,15 +478,7 @@ export default function Dashboard() {
                                 {STATUSES.map((s) => <option key={s}>{s}</option>)}
                               </select>
                             </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-500 mb-1">
-                                Follow-up Date <span className="text-gray-400 font-normal">(auto: +7 days)</span>
-                              </label>
-                              <input type="date" value={followUpForm.follow_up_date}
-                                onChange={(e) => setFollowUpForm({ ...followUpForm, follow_up_date: e.target.value })}
-                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson" />
-                            </div>
-                            <div>
+                            <div className="sm:col-span-2">
                               <label className="block text-xs font-medium text-gray-500 mb-1">Notes</label>
                               <input type="text" autoFocus value={followUpForm.notes}
                                 onChange={(e) => setFollowUpForm({ ...followUpForm, notes: e.target.value })}

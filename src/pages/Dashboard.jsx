@@ -5,7 +5,7 @@ import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 
 const CONTACT_METHODS = ['Instagram DM', 'Text', 'Phone Call', 'Email', 'In Person'];
-const STATUSES        = ['Reached Out', 'Interested', 'Connected with Ascend Admin', 'Enrolled'];
+const STATUSES        = ['Reached Out', 'No Response', 'Interested', 'Connected with Ascend Admin', 'Enrolled', 'Not Interested'];
 const GRADES          = ['9th', '10th', '11th', '12th', 'Other'];
 
 const EMPTY_FORM = {

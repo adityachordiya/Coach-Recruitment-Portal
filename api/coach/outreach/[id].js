@@ -2,7 +2,7 @@ const { getPool } = require('../../_lib/db');
 const { requireAuth } = require('../../_lib/auth');
 const { handleCors } = require('../../_lib/cors');
 
-const VALID_STATUSES = ['Reached Out', 'Interested', 'Connected with Ascend Admin', 'Enrolled'];
+const VALID_STATUSES = ['Reached Out', 'No Response', 'Interested', 'Connected with Ascend Admin', 'Enrolled', 'Not Interested'];
 const VALID_GRADES   = ['9th', '10th', '11th', '12th', 'Other'];
 
 module.exports = async function handler(req, res) {

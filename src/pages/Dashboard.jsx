@@ -14,6 +14,7 @@ export default function Dashboard() {
 
   const [referrals,  setReferrals]  = useState(null);
   const [outreach,   setOutreach]   = useState([]);
+  const [leader,     setLeader]     = useState(undefined); // undefined = loading, null = no data
   const [loadingData, setLoadingData] = useState(true);
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -29,12 +30,14 @@ export default function Dashboard() {
 
   const loadData = useCallback(async () => {
     try {
-      const [refData, outData] = await Promise.all([
+      const [refData, outData, leaderData] = await Promise.all([
         api.get('/api/coach/referrals'),
         api.get('/api/coach/outreach'),
+        api.get('/api/coach/leaderboard'),
       ]);
       setReferrals(refData);
       setOutreach(outData);
+      setLeader(leaderData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -95,6 +98,30 @@ export default function Dashboard() {
         </h1>
         <p className="text-gray-500 text-sm mt-0.5">Here's your recruiting overview.</p>
       </div>
+
+      {/* Leaderboard Banner */}
+      {leader && (
+        <div className="mb-6 rounded-2xl bg-gradient-to-r from-crimson to-crimson-light p-px">
+          <div className="rounded-2xl bg-gradient-to-r from-crimson-50 to-gold-50 px-6 py-4 flex items-center gap-4">
+            <span className="text-2xl">🏆</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+                Current Leader
+              </p>
+              <p className="font-bold text-gray-900 text-lg leading-tight">
+                {leader.first_name} {leader.last_name}
+                {user?.referral_code === leader.referral_code && (
+                  <span className="ml-2 text-sm font-medium text-crimson">— That's you! 🎉</span>
+                )}
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-3xl font-bold text-crimson tabular-nums">{leader.referral_count}</p>
+              <p className="text-xs text-gray-400">referrals</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {/* Referral Code Card */}

@@ -1,6 +1,7 @@
 const { getPool } = require('../../_lib/db');
 const { requireAuth } = require('../../_lib/auth');
 const { handleCors } = require('../../_lib/cors');
+const { v4: uuidv4 } = require('uuid');
 
 const VALID_METHODS  = ['Instagram DM', 'Text', 'Email', 'In Person'];
 const VALID_STATUSES = ['Reached Out', 'Interested', 'Enrolled'];
@@ -21,11 +22,11 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       const { rows } = await pool.query(
-        `SELECT id, contact_name, contact_method, status, notes,
+        `SELECT id, prospect_id, contact_name, contact_method, status, notes,
                 grade, school, follow_up_date, created_at
          FROM coach_outreach_log
          WHERE coach_id = $1
-         ORDER BY created_at DESC`,
+         ORDER BY created_at ASC`,
         [payload.referrerId]
       );
       return res.status(200).json(rows);
@@ -44,6 +45,7 @@ module.exports = async function handler(req, res) {
       grade,
       school,
       follow_up_date,
+      prospect_id, // if provided, this is a follow-up on an existing prospect
     } = req.body || {};
 
     if (!contact_name?.trim()) {
@@ -59,21 +61,32 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: `grade must be one of: ${VALID_GRADES.join(', ')}` });
     }
 
+    // Use provided prospect_id (follow-up) or generate a new one (new prospect)
+    const resolvedProspectId = prospect_id || uuidv4();
+
+    // Auto follow-up date: 7 days from today if not provided
+    const resolvedFollowUpDate = follow_up_date || (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      return d.toISOString().split('T')[0];
+    })();
+
     try {
       const { rows } = await pool.query(
         `INSERT INTO coach_outreach_log
-           (coach_id, contact_name, contact_method, status, notes, grade, school, follow_up_date)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           (coach_id, prospect_id, contact_name, contact_method, status, notes, grade, school, follow_up_date)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
         [
           payload.referrerId,
+          resolvedProspectId,
           contact_name.trim(),
           contact_method,
           status,
           notes?.trim() || null,
           grade || null,
           school?.trim() || null,
-          follow_up_date || null,
+          resolvedFollowUpDate,
         ]
       );
       return res.status(201).json(rows[0]);

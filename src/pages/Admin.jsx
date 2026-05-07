@@ -15,6 +15,9 @@ export default function Admin() {
   const [inviteErr,   setInviteErr]   = useState('');
   const [inviting,    setInviting]    = useState(false);
 
+  const [confirmDelete, setConfirmDelete] = useState(null); // { account_id, name }
+  const [deleting,      setDeleting]      = useState(false);
+
   const loadCoaches = useCallback(async () => {
     try {
       const data = await api.get('/api/admin/coaches');
@@ -27,6 +30,20 @@ export default function Admin() {
   }, []);
 
   useEffect(() => { loadCoaches(); }, [loadCoaches]);
+
+  async function handleDelete() {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/api/admin/coaches/${confirmDelete.account_id}`);
+      setConfirmDelete(null);
+      loadCoaches();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   async function handleInvite(e) {
     e.preventDefault();
@@ -102,6 +119,34 @@ export default function Admin() {
         </div>
       )}
 
+      {/* Delete Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+            <h3 className="font-semibold text-gray-900 text-lg mb-2">Remove coach?</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              This will permanently remove <span className="font-medium text-gray-800">{confirmDelete.name}</span> and
+              all of their outreach entries. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition disabled:opacity-60"
+              >
+                {deleting ? 'Removing…' : 'Remove'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Summary Stats */}
       {!loading && coaches.length > 0 && (
         <div className="grid grid-cols-3 gap-4 mb-6">
@@ -133,6 +178,7 @@ export default function Admin() {
                 onToggle={() =>
                   setExpandedId((id) => (id === coach.account_id ? null : coach.account_id))
                 }
+                onDelete={() => setConfirmDelete({ account_id: coach.account_id, name: `${coach.first_name} ${coach.last_name}` })}
               />
             ))}
           </div>
@@ -151,7 +197,7 @@ function StatCard({ label, value, color = 'text-gray-900' }) {
   );
 }
 
-function CoachRow({ coach, expanded, onToggle }) {
+function CoachRow({ coach, expanded, onToggle, onDelete }) {
   const lastActive = coach.last_active
     ? new Date(coach.last_active).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '—';
@@ -183,7 +229,16 @@ function CoachRow({ coach, expanded, onToggle }) {
             <Stat label="Last Active" value={lastActive} mono={false} />
           </div>
 
-          {/* Chevron */}
+          {/* Delete + Chevron */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="p-1.5 text-gray-300 hover:text-red-500 transition rounded shrink-0"
+            title="Remove coach"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
           <svg
             className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${expanded ? 'rotate-180' : ''}`}
             fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}

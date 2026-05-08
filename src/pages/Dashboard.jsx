@@ -14,6 +14,25 @@ const EMPTY_FORM = {
   status: 'Reached Out', notes: '', grade: '', school: '',
 };
 
+const CAMP_DATE = new Date('2026-07-12T09:00:00');
+
+const RANKS = [
+  { label: 'Rookie',  emoji: '🥉', min: 0,  max: 4,        color: 'text-amber-600'  },
+  { label: 'Scout',   emoji: '🥈', min: 5,  max: 9,        color: 'text-slate-500'  },
+  { label: 'Veteran', emoji: '🥇', min: 10, max: 19,       color: 'text-yellow-500' },
+  { label: 'Elite',   emoji: '💎', min: 20, max: 34,       color: 'text-sky-500'    },
+  { label: 'Legend',  emoji: '👑', min: 35, max: Infinity, color: 'text-crimson'    },
+];
+
+function getRank(count)     { return RANKS.find(r => count <= r.max) ?? RANKS[RANKS.length - 1]; }
+function getNextRank(count) { const i = RANKS.findIndex(r => count <= r.max); return i >= 0 && i < RANKS.length - 1 ? RANKS[i + 1] : null; }
+function getRankProgress(count) {
+  const r = getRank(count);
+  if (!getNextRank(count)) return 100;
+  const range = r.max - r.min + 1;
+  return Math.min(100, Math.round(((count - r.min) / range) * 100));
+}
+
 // Pre-computed bristle angles & lengths for the broomstick — deterministic so no flicker on re-render
 const BRISTLES = [
   { a: -58, l: 22 }, { a: -46, l: 27 }, { a: -34, l: 30 }, { a: -22, l: 28 },
@@ -128,6 +147,24 @@ export default function Dashboard() {
 
   const prevReferralCount = useRef(null);
   const milestoneShown    = useRef(false);
+
+  // Camp countdown
+  const [countdown, setCountdown] = useState(null);
+  useEffect(() => {
+    function tick() {
+      const diff = CAMP_DATE - Date.now();
+      if (diff <= 0) { setCountdown(null); return; }
+      setCountdown({
+        days:    Math.floor(diff / 86400000),
+        hours:   Math.floor((diff % 86400000) / 3600000),
+        minutes: Math.floor((diff % 3600000) / 60000),
+        seconds: Math.floor((diff % 60000) / 1000),
+      });
+    }
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -344,7 +381,22 @@ export default function Dashboard() {
     }
   }
 
-  const isLeader = leader && user?.referral_code === leader.referral_code;
+  const isLeader    = leader && user?.referral_code === leader.referral_code;
+  const rank        = getRank(prospectCount);
+  const nextRank    = getNextRank(prospectCount);
+  const rankProgress = getRankProgress(prospectCount);
+  const motivation  = (() => {
+    if (isLeader && prospectCount > 0) return "You're the #1 recruiter right now. Don't let anyone catch you! 👑";
+    if (streak >= 7)                   return `${streak}-day streak — you're absolutely on fire 🔥`;
+    if (needFollowUpCount >= 4)        return `${needFollowUpCount} prospects need a follow-up. Strike while it's hot! 📣`;
+    if (nextRank) {
+      const n = nextRank.min - prospectCount;
+      return `${n} more prospect${n !== 1 ? 's' : ''} to reach ${nextRank.emoji} ${nextRank.label}!`;
+    }
+    return rank.label === 'Legend'
+      ? "You've hit Legend status. You're what Ascend is built on. 🏆"
+      : "Every conversation could change a student's summer. Keep going!";
+  })();
 
   return (
     <Layout>
@@ -478,7 +530,26 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold text-gray-900">
               Hey, {user?.first_name}! {isLeader ? '🏆' : '👋'}
             </h1>
-            <p className="text-gray-500 text-sm mt-0.5">Here's your recruiting overview.</p>
+            {/* Rank badge + progress bar */}
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span className="text-base leading-none">{rank.emoji}</span>
+              <span className={`text-sm font-bold ${rank.color}`}>{rank.label}</span>
+              {nextRank && (
+                <>
+                  <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-crimson rounded-full transition-all duration-700"
+                      style={{ width: `${rankProgress}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-400">
+                    {nextRank.min - prospectCount} to {nextRank.emoji} {nextRank.label}
+                  </span>
+                </>
+              )}
+            </div>
+            {/* Motivational line */}
+            <p className="text-sm text-gray-500 mt-1">{motivation}</p>
           </div>
         </div>
         {streak > 0 && (
@@ -517,6 +588,44 @@ export default function Dashboard() {
               {leader.referral_count}
             </p>
             <p className={`text-xs ${isLeader ? 'text-white/60' : 'text-gray-400'}`}>referrals enrolled</p>
+          </div>
+        </div>
+      )}
+
+      {/* Camp Countdown */}
+      {countdown && (
+        <div
+          className="mb-6 rounded-2xl overflow-hidden shadow-sm"
+          style={{
+            background: `linear-gradient(100deg, rgba(8,2,4,0.82) 0%, rgba(165,28,48,0.70) 100%), url('/camp-photo.jpg') center 40%/cover no-repeat`,
+          }}
+        >
+          <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-0.5">Camp starts in</p>
+              <p className="text-white font-bold text-lg leading-tight">Ascend California 2026</p>
+              <p className="text-white/45 text-xs mt-0.5">July 12–26 · University of the Pacific</p>
+            </div>
+            <div className="flex items-end gap-2 sm:gap-3 shrink-0">
+              {[
+                { value: countdown.days,    label: 'days' },
+                { value: countdown.hours,   label: 'hrs'  },
+                { value: countdown.minutes, label: 'min'  },
+                { value: countdown.seconds, label: 'sec'  },
+              ].map(({ value, label }, i) => (
+                <React.Fragment key={label}>
+                  {i > 0 && <span className="text-white/30 font-bold text-2xl mb-5 -mx-1">:</span>}
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl px-3 py-2 min-w-[52px] text-center">
+                      <span className="text-white font-bold text-2xl tabular-nums font-mono leading-none">
+                        {String(value).padStart(2, '0')}
+                      </span>
+                    </div>
+                    <span className="text-white/40 text-xs uppercase tracking-widest">{label}</span>
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         </div>
       )}

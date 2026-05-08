@@ -50,10 +50,13 @@ export default function SetupPassword() {
   return (
     <div className="min-h-screen flex">
       {/* Left panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-crimson flex-col justify-between p-12 relative overflow-hidden">
+      <div
+        className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
+        style={{ background: `linear-gradient(160deg, rgba(140,20,38,0.88) 0%, rgba(50,5,12,0.93) 100%), url('/camp-photo.jpg') center 30%/cover no-repeat` }}
+      >
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/5" />
-          <div className="absolute -bottom-32 -left-16 w-80 h-80 rounded-full bg-white/5" />
+          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/[0.04]" />
+          <div className="absolute -bottom-32 -left-16 w-80 h-80 rounded-full bg-white/[0.04]" />
         </div>
         <div className="relative flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">

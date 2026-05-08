@@ -30,12 +30,14 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left panel — brand */}
-      <div className="hidden lg:flex lg:w-1/2 bg-crimson flex-col justify-between p-12 relative overflow-hidden">
-        {/* Background decoration */}
+      <div
+        className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
+        style={{ background: `linear-gradient(160deg, rgba(140,20,38,0.88) 0%, rgba(50,5,12,0.93) 100%), url('/camp-photo.jpg') center 30%/cover no-repeat` }}
+      >
+        {/* Subtle vignette overlay */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/5" />
-          <div className="absolute -bottom-32 -left-16 w-80 h-80 rounded-full bg-white/5" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-white/[0.03]" />
+          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/[0.04]" />
+          <div className="absolute -bottom-32 -left-16 w-80 h-80 rounded-full bg-white/[0.04]" />
         </div>
 
         {/* Logo */}

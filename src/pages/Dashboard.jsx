@@ -597,7 +597,7 @@ export default function Dashboard() {
         <div
           className="mb-6 rounded-2xl overflow-hidden shadow-sm"
           style={{
-            background: `linear-gradient(100deg, rgba(8,2,4,0.80) 0%, rgba(165,28,48,0.68) 100%), url('/photo-classroom-debate.jpg') center 50%/cover no-repeat`,
+            background: `linear-gradient(to right, rgba(5,0,2,0.92) 0%, rgba(5,0,2,0.82) 30%, rgba(120,15,28,0.52) 62%, rgba(165,28,48,0.30) 100%), url('/photo-students-smiling.jpg') center 35%/cover no-repeat`,
           }}
         >
           <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -616,7 +616,7 @@ export default function Dashboard() {
                 <React.Fragment key={label}>
                   {i > 0 && <span className="text-white/30 font-bold text-2xl mb-5 -mx-1">:</span>}
                   <div className="flex flex-col items-center gap-1">
-                    <div className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl px-3 py-2 min-w-[52px] text-center">
+                    <div className="bg-black/40 backdrop-blur-sm border border-white/20 rounded-xl px-3 py-2 min-w-[52px] text-center">
                       <span className="text-white font-bold text-2xl tabular-nums font-mono leading-none">
                         {String(value).padStart(2, '0')}
                       </span>

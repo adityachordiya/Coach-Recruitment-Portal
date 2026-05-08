@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import confetti from 'canvas-confetti';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../lib/AuthContext';
@@ -31,6 +32,36 @@ function followUpIndicator(days, status) {
 function formatDate(str) {
   if (!str) return '—';
   return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function calculateStreak(outreach) {
+  if (!outreach.length) return 0;
+  const dates = new Set(outreach.map((o) => o.created_at.split('T')[0]));
+  const today = new Date().toISOString().split('T')[0];
+  const startOffset = dates.has(today) ? 0 : 1;
+  let streak = 0;
+  for (let i = startOffset; i < 365; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    if (dates.has(dateStr)) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function fireConfetti(type = 'default') {
+  if (type === 'referral') {
+    // Gold burst for referral
+    confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 },
+      colors: ['#D4A017', '#E8B420', '#FAF1CC', '#fff', '#A51C30'] });
+  } else {
+    // Crimson + gold shower for milestone
+    confetti({ particleCount: 80, angle: 60, spread: 70, origin: { x: 0 },
+      colors: ['#A51C30', '#D4A017', '#fff'] });
+    confetti({ particleCount: 80, angle: 120, spread: 70, origin: { x: 1 },
+      colors: ['#A51C30', '#D4A017', '#fff'] });
+  }
 }
 
 function groupByProspect(rows) {
@@ -74,6 +105,10 @@ export default function Dashboard() {
   const [copied,       setCopied]       = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterGrade,  setFilterGrade]  = useState('');
+  const [milestone,    setMilestone]    = useState(null); // current celebration message
+
+  const prevReferralCount = useRef(null);
+  const milestoneShown    = useRef(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -93,6 +128,36 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Confetti: first time reaching 5 unique prospects
+  const prospectCount = useMemo(() => groupByProspect(outreach).length, [outreach]);
+  useEffect(() => {
+    if (loadingData) return;
+    const key = `milestone_5_prospects_${user?.referral_code}`;
+    if (prospectCount >= 5 && !milestoneShown.current && !localStorage.getItem(key)) {
+      milestoneShown.current = true;
+      localStorage.setItem(key, '1');
+      setTimeout(() => {
+        fireConfetti('milestone');
+        setMilestone('🎉 5 prospects reached! Keep it up!');
+        setTimeout(() => setMilestone(null), 4000);
+      }, 500);
+    }
+  }, [prospectCount, loadingData, user]);
+
+  // Confetti: new referral enrolled
+  useEffect(() => {
+    if (loadingData || referrals === null) return;
+    const current = referrals.total ?? 0;
+    if (prevReferralCount.current !== null && current > prevReferralCount.current) {
+      fireConfetti('referral');
+      setMilestone(`🏆 New referral enrolled! You're on fire!`);
+      setTimeout(() => setMilestone(null), 4000);
+    }
+    prevReferralCount.current = current;
+  }, [referrals, loadingData]);
+
+  const streak = useMemo(() => calculateStreak(outreach), [outreach]);
 
   const prospects = useMemo(() => {
     let grouped = groupByProspect(outreach);
@@ -184,6 +249,13 @@ export default function Dashboard() {
 
   return (
     <Layout>
+      {/* Milestone Toast */}
+      {milestone && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-semibold px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 animate-bounce">
+          {milestone}
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-7 flex items-start justify-between gap-4">
         <div>
@@ -192,6 +264,15 @@ export default function Dashboard() {
           </h1>
           <p className="text-gray-500 text-sm mt-0.5">Here's your recruiting overview.</p>
         </div>
+        {streak > 0 && (
+          <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 px-4 py-2 rounded-xl shrink-0">
+            <span className="text-xl">🔥</span>
+            <div>
+              <p className="text-sm font-bold text-orange-700">{streak} day streak</p>
+              <p className="text-xs text-orange-400">Keep logging outreach!</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Leaderboard Banner */}

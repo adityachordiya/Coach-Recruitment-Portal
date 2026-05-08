@@ -102,10 +102,12 @@ export default function Dashboard() {
   const [editForm,    setEditForm]    = useState({});
   const [editLoading, setEditLoading] = useState(false);
 
-  const [copied,       setCopied]       = useState(false);
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterGrade,  setFilterGrade]  = useState('');
-  const [milestone,    setMilestone]    = useState(null); // current celebration message
+  const [copied,         setCopied]         = useState(false);
+  const [filterStatus,   setFilterStatus]   = useState('');
+  const [filterGrade,    setFilterGrade]     = useState('');
+  const [milestone,      setMilestone]      = useState(null);
+  const [confirmDelete,  setConfirmDelete]  = useState(null); // { prospect_id, name }
+  const [deleting,       setDeleting]       = useState(false);
 
   const prevReferralCount = useRef(null);
   const milestoneShown    = useRef(false);
@@ -174,6 +176,21 @@ export default function Dashboard() {
     }).length,
     [prospects]
   );
+
+  async function handleDeleteProspect() {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/api/coach/outreach/prospect/${confirmDelete.prospect_id}`);
+      setOutreach((prev) => prev.filter((e) => e.prospect_id !== confirmDelete.prospect_id));
+      setConfirmDelete(null);
+      setExpandedId(null);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   function copyCode() {
     navigator.clipboard.writeText(user?.referral_code || '').then(() => {
@@ -253,6 +270,33 @@ export default function Dashboard() {
       {milestone && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-semibold px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 animate-bounce">
           {milestone}
+        </div>
+      )}
+
+      {/* Delete Prospect Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h3 className="font-bold text-gray-900 text-lg text-center mb-1">Delete prospect?</h3>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              This will permanently delete <span className="font-semibold text-gray-800">{confirmDelete.name}</span> and all their interaction history.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete(null)}
+                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+                Cancel
+              </button>
+              <button onClick={handleDeleteProspect} disabled={deleting}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition disabled:opacity-60">
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -521,6 +565,14 @@ export default function Dashboard() {
                           Log Follow-up
                         </button>
                       )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setConfirmDelete({ prospect_id, name: latest.contact_name }); }}
+                        className="p-1.5 text-gray-200 hover:text-red-500 hover:bg-red-50 transition rounded-lg"
+                        title="Delete prospect">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                       <svg className={`w-4 h-4 text-gray-300 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                         fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />

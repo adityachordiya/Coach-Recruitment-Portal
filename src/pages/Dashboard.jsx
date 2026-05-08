@@ -106,8 +106,18 @@ export default function Dashboard() {
   const [filterStatus,   setFilterStatus]   = useState('');
   const [filterGrade,    setFilterGrade]     = useState('');
   const [milestone,      setMilestone]      = useState(null);
-  const [confirmDelete,  setConfirmDelete]  = useState(null); // { prospect_id, name }
+  const [confirmDelete,  setConfirmDelete]  = useState(null);
   const [deleting,       setDeleting]       = useState(false);
+
+  // Bird flight state
+  const [birdFlying,  setBirdFlying]  = useState(false);
+  const [birdDisplay, setBirdDisplay] = useState({ x: 0, y: 0, angle: 0, flipped: false, speed: 0 });
+  const birdPosRef    = useRef({ x: 0, y: 0 });
+  const birdTargetRef = useRef({ x: 0, y: 0 });
+  const birdRafRef    = useRef(null);
+  const birdTimerRef  = useRef(null);
+  const birdStopRef   = useRef(null);
+  const prevBirdPos   = useRef({ x: 0, y: 0 });
 
   const prevReferralCount = useRef(null);
   const milestoneShown    = useRef(false);
@@ -192,6 +202,70 @@ export default function Dashboard() {
     }
   }
 
+  function launchBird() {
+    if (birdFlying) return;
+    setBirdFlying(true);
+
+    const colors = ['#A51C30', '#D4A017', '#fff', '#FAE4E8'];
+    confetti({ particleCount: 80, spread: 100, origin: { y: 0.5 }, colors });
+
+    const W = window.innerWidth, H = window.innerHeight;
+    const startX = W / 2, startY = H / 2;
+    birdPosRef.current  = { x: startX, y: startY };
+    prevBirdPos.current = { x: startX, y: startY };
+
+    function newTarget() {
+      birdTargetRef.current = {
+        x: 100 + Math.random() * (W - 240),
+        y: 80  + Math.random() * (H - 200),
+      };
+    }
+    newTarget();
+    birdTimerRef.current = setInterval(newTarget, 1400);
+
+    function animate() {
+      const cur = birdPosRef.current;
+      const tgt = birdTargetRef.current;
+
+      // Smooth lerp — gives natural curved arcs between waypoints
+      const lerp = 0.055;
+      const nx = cur.x + (tgt.x - cur.x) * lerp;
+      const ny = cur.y + (tgt.y - cur.y) * lerp;
+
+      const vx = nx - prevBirdPos.current.x;
+      const vy = ny - prevBirdPos.current.y;
+      const speed = Math.sqrt(vx * vx + vy * vy);
+
+      // Angle of travel → rotate image to match (Harry Potter lean)
+      // Clamp tilt so it doesn't go upside down
+      const rawAngle = Math.atan2(vy, Math.abs(vx)) * (180 / Math.PI);
+      const tiltAngle = Math.max(-35, Math.min(35, rawAngle));
+      const flipped   = vx < 0;
+
+      birdPosRef.current  = { x: nx, y: ny };
+      prevBirdPos.current = { x: nx, y: ny };
+
+      setBirdDisplay({ x: nx, y: ny, angle: tiltAngle, flipped, speed });
+      birdRafRef.current = requestAnimationFrame(animate);
+    }
+
+    birdRafRef.current = requestAnimationFrame(animate);
+
+    birdStopRef.current = setTimeout(() => {
+      clearInterval(birdTimerRef.current);
+      cancelAnimationFrame(birdRafRef.current);
+      setBirdFlying(false);
+      confetti({ particleCount: 120, spread: 120, origin: { y: 0.5 }, colors });
+    }, 6000);
+  }
+
+  // Cleanup bird on unmount
+  useEffect(() => () => {
+    clearInterval(birdTimerRef.current);
+    cancelAnimationFrame(birdRafRef.current);
+    clearTimeout(birdStopRef.current);
+  }, []);
+
   function copyCode() {
     navigator.clipboard.writeText(user?.referral_code || '').then(() => {
       setCopied(true);
@@ -267,6 +341,26 @@ export default function Dashboard() {
 
   return (
     <Layout>
+      {/* Flying bird overlay */}
+      {birdFlying && (
+        <img
+          src="/mascot.png"
+          alt=""
+          style={{
+            position: 'fixed',
+            left: birdDisplay.x,
+            top:  birdDisplay.y,
+            width: 110,
+            height: 110,
+            objectFit: 'contain',
+            zIndex: 9999,
+            transform: `scaleX(${birdDisplay.flipped ? -1 : 1}) rotate(${birdDisplay.angle}deg)`,
+            pointerEvents: 'none',
+            filter: 'drop-shadow(0 6px 20px rgba(165,28,48,0.35))',
+          }}
+        />
+      )}
+
       {/* Milestone Toast */}
       {milestone && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-semibold px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 animate-bounce">
@@ -304,7 +398,12 @@ export default function Dashboard() {
       {/* Header */}
       <div className="mb-7 flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <img src="/mascot.png" alt="Ascend" className="w-16 h-16 object-contain animate-float hidden sm:block" />
+          <img
+            src="/mascot.png"
+            alt="Ascend"
+            onClick={launchBird}
+            className={`w-16 h-16 object-contain hidden sm:block cursor-pointer hover:scale-110 transition-transform ${birdFlying ? 'opacity-0' : 'animate-float'}`}
+          />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
               Hey, {user?.first_name}! {isLeader ? '🏆' : '👋'}

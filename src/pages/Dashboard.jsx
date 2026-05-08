@@ -14,6 +14,13 @@ const EMPTY_FORM = {
   status: 'Reached Out', notes: '', grade: '', school: '',
 };
 
+// Pre-computed bristle angles & lengths for the broomstick — deterministic so no flicker on re-render
+const BRISTLES = [
+  { a: -58, l: 22 }, { a: -46, l: 27 }, { a: -34, l: 30 }, { a: -22, l: 28 },
+  { a: -11, l: 32 }, { a:  -2, l: 26 }, { a:   7, l: 31 }, { a:  18, l: 29 },
+  { a:  29, l: 32 }, { a:  41, l: 27 }, { a:  52, l: 24 }, { a:  61, l: 20 },
+];
+
 const INACTIVE_STATUSES = ['Enrolled', 'Not Interested'];
 
 function daysSince(dateStr) {
@@ -341,24 +348,87 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      {/* Flying bird overlay */}
+      {/* Flying broomstick + mascot overlay */}
       {birdFlying && (
-        <img
-          src="/mascot.png"
-          alt=""
+        <div
           style={{
             position: 'fixed',
-            left: birdDisplay.x,
-            top:  birdDisplay.y,
-            width: 110,
-            height: 110,
-            objectFit: 'contain',
+            left: birdDisplay.x - 20,
+            top:  birdDisplay.y - 10,
+            width: 210,
+            height: 120,
             zIndex: 9999,
-            transform: `scaleX(${birdDisplay.flipped ? -1 : 1}) rotate(${birdDisplay.angle}deg)`,
             pointerEvents: 'none',
-            filter: 'drop-shadow(0 6px 20px rgba(165,28,48,0.35))',
+            transformOrigin: '140px 52px',
+            transform: `scaleX(${birdDisplay.flipped ? -1 : 1}) rotate(${birdDisplay.angle}deg)`,
           }}
-        />
+        >
+          {/* Sparkle trail — these sit at the bristle/tail end so they trail correctly */}
+          <span className="broom-sparkle-1" style={{ position: 'absolute', left: -14, top: 55, fontSize: 13, userSelect: 'none' }}>✨</span>
+          <span className="broom-sparkle-2" style={{ position: 'absolute', left: -28, top: 72, fontSize: 10, userSelect: 'none' }}>⭐</span>
+          <span className="broom-sparkle-3" style={{ position: 'absolute', left:  -6, top: 82, fontSize: 9,  userSelect: 'none' }}>✨</span>
+
+          {/* Broomstick SVG */}
+          <svg
+            style={{ position: 'absolute', left: 0, top: 58 }}
+            width="210" height="65"
+            viewBox="0 0 210 65"
+            overflow="visible"
+          >
+            {/* Bristles — fanning out from the tail end */}
+            {BRISTLES.map(({ a, l }, i) => {
+              const rad = a * Math.PI / 180;
+              return (
+                <line key={i}
+                  x1="30" y1="22"
+                  x2={30 + Math.cos(rad) * l}
+                  y2={22 + Math.sin(rad) * l}
+                  stroke={i % 2 === 0 ? '#7B4A24' : '#4E2C0A'}
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                />
+              );
+            })}
+
+            {/* Shaft — subtle shadow layer first */}
+            <path d="M30 23 L200 16" stroke="#2D1005" strokeWidth="11" strokeLinecap="round" opacity="0.2"/>
+            {/* Shaft — base wood colour */}
+            <path d="M30 22 L200 15" stroke="#9B6535" strokeWidth="8"  strokeLinecap="round"/>
+            {/* Shaft — highlight */}
+            <path d="M35 19 L200 12" stroke="#C89A56" strokeWidth="3"  strokeLinecap="round" opacity="0.55"/>
+
+            {/* Leather grip bindings */}
+            {[98, 110, 122].map((x, i) => (
+              <rect key={i}
+                x={x} y="12" width="4" height="13" rx="2"
+                fill="#1F0A00" opacity="0.6"
+                transform={`rotate(-3 ${x + 2} 18)`}
+              />
+            ))}
+
+            {/* Gold accent ring */}
+            <ellipse cx="150" cy="17" rx="2.5" ry="6" fill="#D4A017" opacity="0.8" transform="rotate(-4 150 17)"/>
+
+            {/* Tip knot */}
+            <circle cx="198" cy="14" r="5" fill="#7B4A24" opacity="0.9"/>
+            <circle cx="198" cy="14" r="2.5" fill="#C89A56" opacity="0.7"/>
+          </svg>
+
+          {/* Mascot riding on the broom */}
+          <img
+            src="/mascot.png"
+            alt=""
+            style={{
+              position: 'absolute',
+              left: 95,
+              top: 0,
+              width: 95,
+              height: 95,
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 6px 18px rgba(165,28,48,0.4))',
+            }}
+          />
+        </div>
       )}
 
       {/* Milestone Toast */}

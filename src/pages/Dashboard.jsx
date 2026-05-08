@@ -209,6 +209,7 @@ export default function Dashboard() {
       setOutreach((prev) => [...prev, entry]);
       setForm(EMPTY_FORM);
       setShowAddForm(false);
+      fireConfetti('milestone');
     } catch (err) {
       setFormError(err.message);
     } finally {

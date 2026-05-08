@@ -22,10 +22,10 @@ function daysSince(dateStr) {
 }
 
 function followUpIndicator(days, status) {
-  if (!days === null || INACTIVE_STATUSES.includes(status)) return null;
-  if (days <= 3)  return { label: `${days}d ago`, color: 'bg-green-100 text-green-700' };
-  if (days <= 6)  return { label: `${days}d ago`, color: 'bg-gold-100 text-yellow-700' };
-  return { label: `${days}d ago — follow up!`, color: 'bg-red-100 text-red-600' };
+  if (days === null || INACTIVE_STATUSES.includes(status)) return null;
+  if (days <= 3)  return { label: `${days}d ago`, color: 'bg-green-50 text-green-700 ring-1 ring-green-200' };
+  if (days <= 6)  return { label: `${days}d ago`, color: 'bg-gold-50 text-yellow-700 ring-1 ring-yellow-200' };
+  return { label: `${days}d — follow up!`, color: 'bg-red-50 text-red-600 ring-1 ring-red-200' };
 }
 
 function formatDate(str) {
@@ -33,7 +33,6 @@ function formatDate(str) {
   return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-// Group flat interaction rows into prospects
 function groupByProspect(rows) {
   const map = new Map();
   for (const row of rows) {
@@ -165,12 +164,7 @@ export default function Dashboard() {
 
   function startEdit(entry) {
     setEditingId(entry.id);
-    setEditForm({
-      status: entry.status,
-      notes:  entry.notes  || '',
-      grade:  entry.grade  || '',
-      school: entry.school || '',
-    });
+    setEditForm({ status: entry.status, notes: entry.notes || '', grade: entry.grade || '', school: entry.school || '' });
   }
 
   async function handleEditSave(id) {
@@ -186,169 +180,218 @@ export default function Dashboard() {
     }
   }
 
+  const isLeader = leader && user?.referral_code === leader.referral_code;
+
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Hey, {user?.first_name}!</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Here's your recruiting overview.</p>
+      {/* Header */}
+      <div className="mb-7 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Hey, {user?.first_name}! {isLeader ? '🏆' : '👋'}
+          </h1>
+          <p className="text-gray-500 text-sm mt-0.5">Here's your recruiting overview.</p>
+        </div>
       </div>
 
       {/* Leaderboard Banner */}
       {leader && (
-        <div className="mb-6 rounded-2xl bg-gradient-to-r from-crimson to-crimson-light p-px">
-          <div className="rounded-2xl bg-gradient-to-r from-crimson-50 to-gold-50 px-6 py-4 flex items-center gap-4">
-            <span className="text-2xl">🏆</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Current Leader</p>
-              <p className="font-bold text-gray-900 text-lg leading-tight">
-                {leader.first_name} {leader.last_name}
-                {user?.referral_code === leader.referral_code && (
-                  <span className="ml-2 text-sm font-medium text-crimson">— That's you! 🎉</span>
-                )}
-              </p>
-            </div>
-            <div className="text-right shrink-0">
-              <p className="text-3xl font-bold text-crimson tabular-nums">{leader.referral_count}</p>
-              <p className="text-xs text-gray-400">referrals</p>
-            </div>
+        <div className={`mb-6 rounded-2xl p-5 flex items-center gap-4 shadow-sm ${
+          isLeader
+            ? 'bg-gradient-to-r from-crimson to-crimson-light text-white'
+            : 'bg-white border border-gray-100'
+        }`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${
+            isLeader ? 'bg-white/20' : 'bg-gold-50'
+          }`}>
+            🏆
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={`text-xs font-semibold uppercase tracking-wide mb-0.5 ${isLeader ? 'text-white/60' : 'text-gray-400'}`}>
+              {isLeader ? 'You\'re the leader!' : 'Current Leader'}
+            </p>
+            <p className={`font-bold text-lg leading-tight ${isLeader ? 'text-white' : 'text-gray-900'}`}>
+              {leader.first_name} {leader.last_name}
+            </p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className={`text-3xl font-bold tabular-nums ${isLeader ? 'text-white' : 'text-crimson'}`}>
+              {leader.referral_count}
+            </p>
+            <p className={`text-xs ${isLeader ? 'text-white/60' : 'text-gray-400'}`}>referrals enrolled</p>
           </div>
         </div>
       )}
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Your Referral Code</p>
-          <div className="flex items-center gap-3">
-            <span className="text-3xl font-bold tracking-wide text-crimson">{user?.referral_code || '—'}</span>
-            <button onClick={copyCode}
-              className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
-              {copied ? '✓ Copied!' : 'Copy'}
-            </button>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
+        {/* Referral Code */}
+        <div className="card p-5 shadow-sm">
+          <div className="flex items-start justify-between mb-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Your Referral Code</p>
+            <div className="w-8 h-8 rounded-lg bg-crimson-50 flex items-center justify-center">
+              <svg className="w-4 h-4 text-crimson" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+            </div>
           </div>
-          <p className="text-xs text-gray-400 mt-2">Share this code so referrals are tracked to you.</p>
+          <p className="text-2xl font-bold tracking-widest text-crimson font-mono mb-1">{user?.referral_code || '—'}</p>
+          <p className="text-xs text-gray-400 mb-3">Students save $50 when they use this code.</p>
+          <button onClick={copyCode}
+            className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-all ${
+              copied
+                ? 'bg-green-50 border-green-200 text-green-700'
+                : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>
+            {copied ? '✓ Copied!' : 'Copy code'}
+          </button>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Total Conversions</p>
-          <div className="flex items-end gap-2">
-            <span className="text-3xl font-bold text-gold">{loadingData ? '—' : referrals?.total ?? 0}</span>
-            <span className="text-gray-400 text-sm mb-1">enrolled</span>
+        {/* Conversions */}
+        <div className="card p-5 shadow-sm">
+          <div className="flex items-start justify-between mb-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Enrolled</p>
+            <div className="w-8 h-8 rounded-lg bg-gold-50 flex items-center justify-center">
+              <svg className="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
           </div>
-          <p className="text-xs text-gray-400 mt-2">Students who signed up using your referral code.</p>
+          <div className="flex items-end gap-1.5 mb-1">
+            <span className="text-3xl font-bold text-gold tabular-nums">{loadingData ? '—' : referrals?.total ?? 0}</span>
+            <span className="text-gray-400 text-sm mb-1">students</span>
+          </div>
+          <p className="text-xs text-gray-400">Signed up using your referral code.</p>
         </div>
 
-        <div className={`rounded-2xl border p-6 ${needFollowUpCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Need Follow-up</p>
-          <div className="flex items-end gap-2">
-            <span className={`text-3xl font-bold ${needFollowUpCount > 0 ? 'text-red-500' : 'text-gray-300'}`}>
+        {/* Follow-up */}
+        <div className={`card p-5 shadow-sm ${needFollowUpCount > 0 ? 'border-red-200 bg-red-50' : ''}`}>
+          <div className="flex items-start justify-between mb-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Need Follow-up</p>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              needFollowUpCount > 0 ? 'bg-red-100' : 'bg-gray-100'
+            }`}>
+              <svg className={`w-4 h-4 ${needFollowUpCount > 0 ? 'text-red-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </div>
+          </div>
+          <div className="flex items-end gap-1.5 mb-1">
+            <span className={`text-3xl font-bold tabular-nums ${needFollowUpCount > 0 ? 'text-red-500' : 'text-gray-300'}`}>
               {loadingData ? '—' : needFollowUpCount}
             </span>
             <span className="text-gray-400 text-sm mb-1">prospects</span>
           </div>
-          <p className="text-xs text-gray-400 mt-2">
-            {needFollowUpCount > 0 ? 'No contact in 7+ days.' : "You're all caught up!"}
+          <p className="text-xs text-gray-400">
+            {needFollowUpCount > 0 ? 'No contact in 7+ days.' : "You're all caught up! 🎉"}
           </p>
         </div>
       </div>
 
-      {/* Prospects */}
-      <div className="bg-white rounded-2xl border border-gray-200">
+      {/* Prospects Panel */}
+      <div className="card shadow-sm overflow-hidden">
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">Prospects</h2>
+          <div>
+            <h2 className="font-semibold text-gray-900">Prospects</h2>
+            <p className="text-xs text-gray-400 mt-0.5">{outreach.length === 0 ? 'No prospects yet' : `${groupByProspect(outreach).length} total`}</p>
+          </div>
           <button
             onClick={() => { setShowAddForm((v) => !v); setFormError(''); }}
-            className="text-sm font-medium bg-crimson text-white px-4 py-2 rounded-lg hover:bg-crimson-dark transition">
-            {showAddForm ? 'Cancel' : '+ Add Prospect'}
+            className={`text-sm font-medium px-4 py-2 rounded-xl transition-all ${
+              showAddForm
+                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-crimson text-white hover:bg-crimson-dark shadow-sm'
+            }`}>
+            {showAddForm ? '✕ Cancel' : '+ Add Prospect'}
           </button>
         </div>
 
         {/* Add Prospect Form */}
         {showAddForm && (
-          <form onSubmit={handleAddSubmit} className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-            {formError && <p className="text-red-600 text-sm mb-3">{formError}</p>}
+          <form onSubmit={handleAddSubmit} className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+            {formError && (
+              <div className="mb-4 bg-red-50 border border-red-100 text-red-700 text-sm px-4 py-3 rounded-xl">{formError}</div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Contact Name *</label>
+              <FormField label="Contact Name *">
                 <input type="text" required autoFocus value={form.contact_name}
                   onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson focus:border-transparent"
-                  placeholder="e.g. Jordan Smith" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">School</label>
+                  className="input" placeholder="e.g. Jordan Smith" />
+              </FormField>
+              <FormField label="School">
                 <input type="text" value={form.school}
                   onChange={(e) => setForm({ ...form, school: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson focus:border-transparent"
-                  placeholder="e.g. Lincoln High School" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Grade</label>
-                <select value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson focus:border-transparent bg-white">
+                  className="input" placeholder="e.g. Lincoln High School" />
+              </FormField>
+              <FormField label="Grade">
+                <select value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value })} className="input">
                   <option value="">— Select grade —</option>
                   {GRADES.map((g) => <option key={g}>{g}</option>)}
                 </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Contact Method *</label>
-                <select value={form.contact_method} onChange={(e) => setForm({ ...form, contact_method: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson focus:border-transparent bg-white">
+              </FormField>
+              <FormField label="Contact Method *">
+                <select value={form.contact_method} onChange={(e) => setForm({ ...form, contact_method: e.target.value })} className="input">
                   {CONTACT_METHODS.map((m) => <option key={m}>{m}</option>)}
                 </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
-                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson focus:border-transparent bg-white">
+              </FormField>
+              <FormField label="Status">
+                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="input">
                   {STATUSES.map((s) => <option key={s}>{s}</option>)}
                 </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+              </FormField>
+              <FormField label="Notes">
                 <input type="text" value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson focus:border-transparent"
-                  placeholder="Optional notes…" />
-              </div>
+                  className="input" placeholder="Optional notes…" />
+              </FormField>
             </div>
-            <button type="submit" disabled={submitting}
-              className="bg-crimson text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-crimson-dark transition disabled:opacity-60">
+            <button type="submit" disabled={submitting} className="btn-primary px-5 py-2 text-sm">
               {submitting ? 'Saving…' : 'Add Prospect'}
             </button>
           </form>
         )}
 
         {/* Filter Bar */}
-        <div className="px-6 py-3 border-b border-gray-100 flex flex-wrap gap-3 items-center bg-gray-50">
+        <div className="px-6 py-3 border-b border-gray-100 flex flex-wrap gap-2 items-center bg-gray-50/50">
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-crimson">
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-crimson/20 text-gray-600">
             <option value="">All Statuses</option>
             {STATUSES.map((s) => <option key={s}>{s}</option>)}
           </select>
           <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-crimson">
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-crimson/20 text-gray-600">
             <option value="">All Grades</option>
             {GRADES.map((g) => <option key={g}>{g}</option>)}
           </select>
           {(filterStatus || filterGrade) && (
             <button onClick={() => { setFilterStatus(''); setFilterGrade(''); }}
-              className="text-xs text-gray-400 hover:text-crimson transition">Clear filters</button>
+              className="text-xs text-gray-400 hover:text-crimson transition px-2 py-1.5 rounded-lg hover:bg-crimson-50">
+              × Clear
+            </button>
           )}
-          <span className="text-xs text-gray-400 ml-auto">
+          <span className="text-xs text-gray-400 ml-auto font-medium">
             {prospects.length} {prospects.length === 1 ? 'prospect' : 'prospects'}
           </span>
         </div>
 
         {/* Prospect List */}
         {loadingData ? (
-          <div className="flex justify-center py-12">
-            <div className="w-5 h-5 border-2 border-crimson border-t-transparent rounded-full animate-spin" />
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="w-6 h-6 border-2 border-crimson border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-gray-400">Loading prospects…</p>
           </div>
         ) : prospects.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <p className="text-sm">{outreach.length === 0 ? 'No prospects yet.' : 'No prospects match your filters.'}</p>
-            {outreach.length === 0 && <p className="text-xs mt-1">Click "+ Add Prospect" to get started.</p>}
+          <div className="text-center py-16 px-6">
+            <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4 text-2xl">
+              {outreach.length === 0 ? '📋' : '🔍'}
+            </div>
+            <p className="font-medium text-gray-700">
+              {outreach.length === 0 ? 'No prospects yet' : 'No prospects match your filters'}
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              {outreach.length === 0 ? 'Click "+ Add Prospect" to start tracking your outreach.' : 'Try clearing your filters.'}
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -360,15 +403,24 @@ export default function Dashboard() {
               const isExpanded = expandedId === prospect_id;
 
               return (
-                <div key={prospect_id}>
+                <div key={prospect_id} className={needsFollowUp ? 'bg-red-50/40' : ''}>
                   <div
-                    className={`flex items-center gap-4 px-6 py-4 cursor-pointer hover:bg-gray-50 transition ${needsFollowUp ? 'bg-red-50 hover:bg-red-100' : ''}`}
+                    className="flex items-center gap-4 px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
                     onClick={() => setExpandedId(isExpanded ? null : prospect_id)}
                   >
+                    {/* Avatar */}
+                    <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                      <span className="text-sm font-semibold text-gray-500">
+                        {latest.contact_name?.[0]?.toUpperCase() ?? '?'}
+                      </span>
+                    </div>
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-gray-900">{latest.contact_name}</span>
-                        {latest.grade && <span className="badge bg-gray-100 text-gray-600">{latest.grade}</span>}
+                        {latest.grade && (
+                          <span className="badge bg-gray-100 text-gray-500 ring-1 ring-gray-200">{latest.grade}</span>
+                        )}
                         <StatusBadge status={latest.status} />
                         {indicator && (
                           <span className={`badge ${indicator.color}`}>{indicator.label}</span>
@@ -379,53 +431,51 @@ export default function Dashboard() {
                         <span>{interactions.length} {interactions.length === 1 ? 'interaction' : 'interactions'}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
+
+                    <div className="flex items-center gap-2 shrink-0">
                       {!INACTIVE_STATUSES.includes(latest.status) && (
                         <button
                           onClick={(e) => { e.stopPropagation(); openFollowUp(prospect); }}
-                          className="text-xs font-medium text-crimson border border-crimson px-3 py-1.5 rounded-lg hover:bg-crimson hover:text-white transition">
+                          className="text-xs font-semibold text-crimson border border-crimson/30 bg-crimson-50 px-3 py-1.5 rounded-lg hover:bg-crimson hover:text-white transition-all">
                           Log Follow-up
                         </button>
                       )}
-                      <svg className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      <svg className={`w-4 h-4 text-gray-300 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                         fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
                   </div>
 
-                  {/* Interaction Timeline */}
+                  {/* Expanded Timeline */}
                   {isExpanded && (
-                    <div className="px-6 pb-4 bg-gray-50 border-t border-gray-100">
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-4 mb-3">
+                    <div className="px-6 pb-5 bg-gray-50/70 border-t border-gray-100">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-4 mb-4">
                         Interaction History
-                      </h4>
+                      </p>
                       <div className="space-y-2 mb-4">
                         {interactions.map((entry, idx) => (
                           <div key={entry.id}>
                             {editingId === entry.id ? (
-                              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                                  <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+                                  <FormField label="Status">
                                     <select value={editForm.status}
                                       onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                                      className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson bg-white">
+                                      className="input text-sm py-2">
                                       {STATUSES.map((s) => <option key={s}>{s}</option>)}
                                     </select>
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Notes</label>
+                                  </FormField>
+                                  <FormField label="Notes">
                                     <input type="text" value={editForm.notes}
                                       onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                                      className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson"
-                                      placeholder="Notes…" />
-                                  </div>
+                                      className="input text-sm py-2" placeholder="Notes…" />
+                                  </FormField>
                                 </div>
                                 <div className="flex gap-2">
                                   <button onClick={() => handleEditSave(entry.id)} disabled={editLoading}
-                                    className="text-xs bg-crimson text-white font-medium px-3 py-1.5 rounded-lg hover:bg-crimson-dark transition disabled:opacity-60">
-                                    Save
+                                    className="btn-primary text-xs px-4 py-1.5">
+                                    {editLoading ? 'Saving…' : 'Save'}
                                   </button>
                                   <button onClick={() => setEditingId(null)}
                                     className="text-xs text-gray-400 hover:text-gray-600 px-3 py-1.5 transition">
@@ -435,21 +485,30 @@ export default function Dashboard() {
                               </div>
                             ) : (
                               <div className="flex items-start gap-3">
-                                <div className="flex flex-col items-center mt-1 shrink-0">
-                                  <div className={`w-2.5 h-2.5 rounded-full ${idx === interactions.length - 1 ? 'bg-crimson' : 'bg-gray-300'}`} />
-                                  {idx < interactions.length - 1 && <div className="w-px h-full min-h-6 bg-gray-200 mt-1" />}
+                                <div className="flex flex-col items-center mt-2 shrink-0">
+                                  <div className={`w-2.5 h-2.5 rounded-full ring-2 ring-white ${
+                                    idx === interactions.length - 1 ? 'bg-crimson' : 'bg-gray-300'
+                                  }`} />
+                                  {idx < interactions.length - 1 && (
+                                    <div className="w-px flex-1 min-h-6 bg-gray-200 mt-1" />
+                                  )}
                                 </div>
-                                <div className="flex-1 bg-white rounded-xl border border-gray-200 p-3">
+                                <div className="flex-1 bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
                                   <div className="flex items-center justify-between flex-wrap gap-2">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <StatusBadge status={entry.status} />
-                                      <span className="text-xs text-gray-500">{entry.contact_method}</span>
+                                      <span className="text-xs text-gray-400 font-medium">{entry.contact_method}</span>
+                                      <span className="text-xs text-gray-300">·</span>
                                       <span className="text-xs text-gray-400">{formatDate(entry.created_at)}</span>
                                     </div>
                                     <button onClick={() => startEdit(entry)}
-                                      className="text-xs text-gray-400 hover:text-crimson transition">Edit</button>
+                                      className="text-xs text-gray-300 hover:text-crimson transition font-medium">
+                                      Edit
+                                    </button>
                                   </div>
-                                  {entry.notes && <p className="text-sm text-gray-600 mt-1.5">{entry.notes}</p>}
+                                  {entry.notes && (
+                                    <p className="text-sm text-gray-600 mt-2 leading-relaxed">{entry.notes}</p>
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -459,36 +518,34 @@ export default function Dashboard() {
 
                       {/* Log Follow-up Form */}
                       {followUpFor === prospect_id && (
-                        <form onSubmit={handleFollowUpSubmit} className="bg-white rounded-xl border border-gray-200 p-4 mt-2">
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">New Interaction</p>
+                        <form onSubmit={handleFollowUpSubmit} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">New Interaction</p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-500 mb-1">Contact Method</label>
+                            <FormField label="Contact Method">
                               <select value={followUpForm.contact_method}
                                 onChange={(e) => setFollowUpForm({ ...followUpForm, contact_method: e.target.value })}
-                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson bg-white">
+                                className="input text-sm py-2">
                                 {CONTACT_METHODS.map((m) => <option key={m}>{m}</option>)}
                               </select>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-500 mb-1">New Status</label>
+                            </FormField>
+                            <FormField label="New Status">
                               <select value={followUpForm.status}
                                 onChange={(e) => setFollowUpForm({ ...followUpForm, status: e.target.value })}
-                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson bg-white">
+                                className="input text-sm py-2">
                                 {STATUSES.map((s) => <option key={s}>{s}</option>)}
                               </select>
-                            </div>
+                            </FormField>
                             <div className="sm:col-span-2">
-                              <label className="block text-xs font-medium text-gray-500 mb-1">Notes</label>
-                              <input type="text" autoFocus value={followUpForm.notes}
-                                onChange={(e) => setFollowUpForm({ ...followUpForm, notes: e.target.value })}
-                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-crimson"
-                                placeholder="What happened?" />
+                              <FormField label="Notes">
+                                <input type="text" autoFocus value={followUpForm.notes}
+                                  onChange={(e) => setFollowUpForm({ ...followUpForm, notes: e.target.value })}
+                                  className="input text-sm py-2" placeholder="What happened in this interaction?" />
+                              </FormField>
                             </div>
                           </div>
                           <div className="flex gap-2">
                             <button type="submit" disabled={followUpSubmitting}
-                              className="text-xs bg-crimson text-white font-medium px-4 py-1.5 rounded-lg hover:bg-crimson-dark transition disabled:opacity-60">
+                              className="btn-primary text-xs px-4 py-1.5">
                               {followUpSubmitting ? 'Saving…' : 'Log Interaction'}
                             </button>
                             <button type="button" onClick={() => setFollowUpFor(null)}
@@ -507,5 +564,14 @@ export default function Dashboard() {
         )}
       </div>
     </Layout>
+  );
+}
+
+function FormField({ label, children }) {
+  return (
+    <div>
+      <label className="label">{label}</label>
+      {children}
+    </div>
   );
 }

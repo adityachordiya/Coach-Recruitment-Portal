@@ -26,7 +26,7 @@ export default function Layout({ children }) {
                 My Dashboard
               </NavLink>
               <NavLink to="/resources" active={location.pathname === '/resources'}>
-                Playbook
+                Resources
               </NavLink>
               {user?.role === 'owner' && (
                 <NavLink to="/admin" active={location.pathname === '/admin'}>

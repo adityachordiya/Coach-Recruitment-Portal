@@ -54,7 +54,9 @@ export default function Login() {
         {/* Center content */}
         <div className="relative space-y-8">
           <div>
-            <div className="text-5xl mb-6">🏆</div>
+            <div className="mb-6 flex justify-center">
+              <img src="/mascot.png" alt="Ascend mascot" className="w-36 h-36 object-contain animate-float drop-shadow-2xl" />
+            </div>
             <h1 className="text-4xl font-bold text-white leading-tight text-balance">
               The #1 Congress camp in the country
             </h1>

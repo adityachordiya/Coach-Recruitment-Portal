@@ -65,7 +65,9 @@ export default function SetupPassword() {
           </div>
         </div>
         <div className="relative">
-          <div className="text-5xl mb-6">👋</div>
+          <div className="mb-6 flex justify-center">
+            <img src="/mascot.png" alt="Ascend mascot" className="w-32 h-32 object-contain animate-float drop-shadow-2xl" />
+          </div>
           <h1 className="text-4xl font-bold text-white leading-tight">You're almost in.</h1>
           <p className="text-white/70 mt-4 text-lg leading-relaxed">
             Set up your password to start tracking your recruiting and earning referral credits.

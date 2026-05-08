@@ -24,9 +24,7 @@ export default function Layout({ children }) {
 
           {/* Logo */}
           <Link to="/dashboard" className="flex items-center gap-2.5 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-crimson flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-sm leading-none">A</span>
-            </div>
+            <img src="/mascot.png" alt="Ascend" className="w-9 h-9 object-contain animate-wiggle" />
             <div className="hidden sm:block">
               <span className="font-bold text-gray-900 text-sm leading-none">Ascend</span>
               <span className="text-gray-400 text-sm font-normal"> Coach Portal</span>

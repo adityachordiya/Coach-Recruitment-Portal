@@ -303,11 +303,14 @@ export default function Dashboard() {
 
       {/* Header */}
       <div className="mb-7 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Hey, {user?.first_name}! {isLeader ? '🏆' : '👋'}
-          </h1>
-          <p className="text-gray-500 text-sm mt-0.5">Here's your recruiting overview.</p>
+        <div className="flex items-center gap-4">
+          <img src="/mascot.png" alt="Ascend" className="w-16 h-16 object-contain animate-float hidden sm:block" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Hey, {user?.first_name}! {isLeader ? '🏆' : '👋'}
+            </h1>
+            <p className="text-gray-500 text-sm mt-0.5">Here's your recruiting overview.</p>
+          </div>
         </div>
         {streak > 0 && (
           <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 px-4 py-2 rounded-xl shrink-0">

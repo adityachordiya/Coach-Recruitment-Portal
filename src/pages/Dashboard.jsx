@@ -6,7 +6,7 @@ import { api } from '../lib/api';
 
 const CONTACT_METHODS = ['Instagram DM', 'Text', 'Phone Call', 'Email', 'In Person'];
 const STATUSES        = ['Reached Out', 'No Response', 'Interested', 'Connected with Ascend Admin', 'Enrolled', 'Not Interested'];
-const GRADES          = ['9th', '10th', '11th', '12th', 'Other'];
+const GRADES          = ['6th', '7th', '8th', '9th', '10th', '11th', '12th', 'Other'];
 
 const EMPTY_FORM = {
   contact_name: '', contact_method: 'Instagram DM',

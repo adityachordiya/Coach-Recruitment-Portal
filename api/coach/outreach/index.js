@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 
 const VALID_METHODS  = ['Instagram DM', 'Text', 'Phone Call', 'Email', 'In Person'];
 const VALID_STATUSES = ['Reached Out', 'No Response', 'Interested', 'Connected with Ascend Admin', 'Enrolled', 'Not Interested'];
-const VALID_GRADES   = ['9th', '10th', '11th', '12th', 'Other'];
+const VALID_GRADES   = ['6th', '7th', '8th', '9th', '10th', '11th', '12th', 'Other'];
 
 module.exports = async function handler(req, res) {
   if (handleCors(req, res)) return;

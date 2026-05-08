@@ -52,7 +52,7 @@ export default function SetupPassword() {
       {/* Left panel */}
       <div
         className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
-        style={{ background: `linear-gradient(160deg, rgba(140,20,38,0.88) 0%, rgba(50,5,12,0.93) 100%), url('/camp-photo.jpg') center 30%/cover no-repeat` }}
+        style={{ background: `linear-gradient(160deg, rgba(140,20,38,0.88) 0%, rgba(50,5,12,0.93) 100%), url('/photo-students-smiling.jpg') center 40%/cover no-repeat` }}
       >
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/[0.04]" />

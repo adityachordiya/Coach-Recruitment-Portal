@@ -597,7 +597,7 @@ export default function Dashboard() {
         <div
           className="mb-6 rounded-2xl overflow-hidden shadow-sm"
           style={{
-            background: `linear-gradient(to right, rgba(5,0,2,0.92) 0%, rgba(5,0,2,0.80) 30%, rgba(120,15,28,0.50) 62%, rgba(165,28,48,0.28) 100%), url('/camp-photo.jpg') center 30%/cover no-repeat`,
+            background: `linear-gradient(to right, rgba(5,0,2,0.92) 0%, rgba(5,0,2,0.80) 30%, rgba(120,15,28,0.50) 62%, rgba(165,28,48,0.28) 100%), url('/camp-photo.jpg') center center/cover no-repeat`,
           }}
         >
           <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -206,6 +206,9 @@ function CoachRow({ coach, expanded, onToggle, onDelete }) {
   const lastActive = coach.last_active
     ? new Date(coach.last_active).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '—';
+  const lastLogin = coach.last_login_at
+    ? new Date(coach.last_login_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '—';
 
   const initials = `${coach.first_name?.[0] ?? ''}${coach.last_name?.[0] ?? ''}`.toUpperCase();
 
@@ -230,9 +233,10 @@ function CoachRow({ coach, expanded, onToggle, onDelete }) {
 
         {/* Stats */}
         <div className="hidden sm:flex items-center gap-6 text-sm shrink-0">
-          <Stat label="Referrals" value={coach.referral_count} color={coach.referral_count > 0 ? 'text-gold font-bold' : ''} />
-          <Stat label="Outreach" value={coach.outreach_count} color={coach.outreach_count > 0 ? 'text-crimson font-bold' : ''} />
-          <Stat label="Last Active" value={lastActive} mono={false} />
+          <Stat label="Referrals"     value={coach.referral_count} color={coach.referral_count > 0 ? 'text-gold font-bold' : ''} />
+          <Stat label="Outreach"      value={coach.outreach_count} color={coach.outreach_count > 0 ? 'text-crimson font-bold' : ''} />
+          <Stat label="Last Login"    value={lastLogin}   mono={false} />
+          <Stat label="Last Outreach" value={lastActive}  mono={false} />
         </div>
 
         {/* Actions */}

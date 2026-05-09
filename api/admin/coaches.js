@@ -18,9 +18,10 @@ module.exports = async function handler(req, res) {
     // Get all coaches with outreach stats
     const { rows: coaches } = await pool.query(`
       SELECT
-        ca.id          AS account_id,
+        ca.id            AS account_id,
         ca.role,
-        r.id           AS referrer_id,
+        ca.last_login_at,
+        r.id             AS referrer_id,
         r.first_name,
         r.last_name,
         r.email,

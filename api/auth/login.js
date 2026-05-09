@@ -31,6 +31,12 @@ module.exports = async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    // Stamp last login time
+    await pool.query(
+      `UPDATE coach_accounts SET last_login_at = NOW() WHERE id = $1`,
+      [account.id]
+    );
+
     const token = signToken({
       accountId: account.id,
       referrerId: account.referrer_id,

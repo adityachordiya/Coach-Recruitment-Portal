@@ -36,7 +36,8 @@ module.exports = async function handler(req, res) {
 
     await pool.query(
       `UPDATE coach_accounts
-       SET password_hash = $1, invite_token = NULL, invite_token_expires_at = NULL
+       SET password_hash = $1, invite_token = NULL, invite_token_expires_at = NULL,
+           last_login_at = NOW()
        WHERE id = $2`,
       [passwordHash, account.id]
     );

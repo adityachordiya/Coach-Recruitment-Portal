@@ -19,7 +19,9 @@ module.exports = async function handler(req, res) {
   const { id } = req.query;
   if (!id) return res.status(400).json({ error: 'Entry ID is required' });
 
-  const { status, notes, grade, school, follow_up_date } = req.body || {};
+  const { status, notes, grade, school, follow_up_date,
+          student_email, student_phone,
+          parent_name, parent_email, parent_phone } = req.body || {};
 
   if (status !== undefined && !VALID_STATUSES.includes(status)) {
     return res.status(400).json({ error: `status must be one of: ${VALID_STATUSES.join(', ')}` });
@@ -48,7 +50,12 @@ module.exports = async function handler(req, res) {
     if (notes !== undefined)        { fields.push(`notes = $${i++}`);           values.push(notes?.trim() || null); }
     if (grade !== undefined)        { fields.push(`grade = $${i++}`);           values.push(grade || null); }
     if (school !== undefined)       { fields.push(`school = $${i++}`);          values.push(school?.trim() || null); }
-    if (follow_up_date !== undefined) { fields.push(`follow_up_date = $${i++}`); values.push(follow_up_date || null); }
+    if (follow_up_date !== undefined)  { fields.push(`follow_up_date = $${i++}`);  values.push(follow_up_date || null); }
+    if (student_email !== undefined)   { fields.push(`student_email = $${i++}`);   values.push(student_email?.trim()  || null); }
+    if (student_phone !== undefined)   { fields.push(`student_phone = $${i++}`);   values.push(student_phone?.trim()  || null); }
+    if (parent_name !== undefined)     { fields.push(`parent_name = $${i++}`);     values.push(parent_name?.trim()    || null); }
+    if (parent_email !== undefined)    { fields.push(`parent_email = $${i++}`);    values.push(parent_email?.trim()   || null); }
+    if (parent_phone !== undefined)    { fields.push(`parent_phone = $${i++}`);    values.push(parent_phone?.trim()   || null); }
 
     if (fields.length === 0) {
       return res.status(400).json({ error: 'Provide at least one field to update' });

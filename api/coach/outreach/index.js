@@ -23,7 +23,9 @@ module.exports = async function handler(req, res) {
     try {
       const { rows } = await pool.query(
         `SELECT id, prospect_id, contact_name, contact_method, status, notes,
-                grade, school, follow_up_date, created_at
+                grade, school, follow_up_date, created_at,
+                student_email, student_phone,
+                parent_name, parent_email, parent_phone
          FROM coach_outreach_log
          WHERE coach_id = $1
          ORDER BY created_at ASC`,
@@ -45,7 +47,12 @@ module.exports = async function handler(req, res) {
       grade,
       school,
       follow_up_date,
-      prospect_id, // if provided, this is a follow-up on an existing prospect
+      prospect_id,
+      student_email,
+      student_phone,
+      parent_name,
+      parent_email,
+      parent_phone,
     } = req.body || {};
 
     if (!contact_name?.trim()) {
@@ -61,10 +68,8 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: `grade must be one of: ${VALID_GRADES.join(', ')}` });
     }
 
-    // Use provided prospect_id (follow-up) or generate a new one (new prospect)
     const resolvedProspectId = prospect_id || uuidv4();
 
-    // Auto follow-up date: 7 days from today if not provided
     const resolvedFollowUpDate = follow_up_date || (() => {
       const d = new Date();
       d.setDate(d.getDate() + 7);
@@ -74,8 +79,10 @@ module.exports = async function handler(req, res) {
     try {
       const { rows } = await pool.query(
         `INSERT INTO coach_outreach_log
-           (coach_id, prospect_id, contact_name, contact_method, status, notes, grade, school, follow_up_date)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           (coach_id, prospect_id, contact_name, contact_method, status, notes,
+            grade, school, follow_up_date,
+            student_email, student_phone, parent_name, parent_email, parent_phone)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
          RETURNING *`,
         [
           payload.referrerId,
@@ -83,10 +90,15 @@ module.exports = async function handler(req, res) {
           contact_name.trim(),
           contact_method,
           status,
-          notes?.trim() || null,
-          grade || null,
-          school?.trim() || null,
+          notes?.trim()         || null,
+          grade                  || null,
+          school?.trim()         || null,
           resolvedFollowUpDate,
+          student_email?.trim()  || null,
+          student_phone?.trim()  || null,
+          parent_name?.trim()    || null,
+          parent_email?.trim()   || null,
+          parent_phone?.trim()   || null,
         ]
       );
       return res.status(201).json(rows[0]);

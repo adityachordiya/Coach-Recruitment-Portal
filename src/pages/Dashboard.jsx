@@ -12,6 +12,8 @@ const GRADES          = ['6th', '7th', '8th', '9th', '10th', '11th', '12th', 'Ot
 const EMPTY_FORM = {
   contact_name: '', contact_method: 'Instagram DM',
   status: 'Reached Out', notes: '', grade: '', school: '',
+  student_email: '', student_phone: '',
+  parent_name: '', parent_email: '', parent_phone: '',
 };
 
 const CAMP_DATE = new Date('2026-07-12T09:00:00');
@@ -365,7 +367,12 @@ export default function Dashboard() {
 
   function startEdit(entry) {
     setEditingId(entry.id);
-    setEditForm({ status: entry.status, notes: entry.notes || '', grade: entry.grade || '', school: entry.school || '' });
+    setEditForm({
+      status: entry.status, notes: entry.notes || '',
+      grade: entry.grade || '', school: entry.school || '',
+      student_email: entry.student_email || '', student_phone: entry.student_phone || '',
+      parent_name: entry.parent_name || '', parent_email: entry.parent_email || '', parent_phone: entry.parent_phone || '',
+    });
   }
 
   async function handleEditSave(id) {
@@ -753,6 +760,46 @@ export default function Dashboard() {
                   className="input" placeholder="Optional notes…" />
               </FormField>
             </div>
+
+            {/* Contact Info */}
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Student Contact <span className="font-normal normal-case text-gray-300">(optional)</span></p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <FormField label="Student Email">
+                  <input type="email" value={form.student_email}
+                    onChange={(e) => setForm({ ...form, student_email: e.target.value })}
+                    className="input" placeholder="student@email.com" />
+                </FormField>
+                <FormField label="Student Phone">
+                  <input type="tel" value={form.student_phone}
+                    onChange={(e) => setForm({ ...form, student_phone: e.target.value })}
+                    className="input" placeholder="(555) 123-4567" />
+                </FormField>
+              </div>
+            </div>
+
+            {/* Parent Info */}
+            <div className="pt-4 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Parent / Guardian <span className="font-normal normal-case text-gray-300">(optional)</span></p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <FormField label="Parent Name">
+                  <input type="text" value={form.parent_name}
+                    onChange={(e) => setForm({ ...form, parent_name: e.target.value })}
+                    className="input" placeholder="Jane Smith" />
+                </FormField>
+                <FormField label="Parent Email">
+                  <input type="email" value={form.parent_email}
+                    onChange={(e) => setForm({ ...form, parent_email: e.target.value })}
+                    className="input" placeholder="parent@email.com" />
+                </FormField>
+                <FormField label="Parent Phone">
+                  <input type="tel" value={form.parent_phone}
+                    onChange={(e) => setForm({ ...form, parent_phone: e.target.value })}
+                    className="input" placeholder="(555) 987-6543" />
+                </FormField>
+              </div>
+            </div>
+
             <button type="submit" disabled={submitting} className="btn-primary px-5 py-2 text-sm">
               {submitting ? 'Saving…' : 'Add Prospect'}
             </button>
@@ -865,7 +912,51 @@ export default function Dashboard() {
                   {/* Expanded Timeline */}
                   {isExpanded && (
                     <div className="px-6 pb-5 bg-gray-50/70 border-t border-gray-100">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-4 mb-4">
+
+                      {/* Contact details card */}
+                      {(latest.student_email || latest.student_phone || latest.parent_name || latest.parent_email || latest.parent_phone) && (
+                        <div className="mt-4 mb-4 bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Contact Details</p>
+                          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                            {latest.student_email && (
+                              <a href={`mailto:${latest.student_email}`} className="flex items-center gap-1.5 text-gray-600 hover:text-crimson transition">
+                                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                {latest.student_email}
+                              </a>
+                            )}
+                            {latest.student_phone && (
+                              <a href={`tel:${latest.student_phone}`} className="flex items-center gap-1.5 text-gray-600 hover:text-crimson transition">
+                                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                {latest.student_phone}
+                              </a>
+                            )}
+                          </div>
+                          {(latest.parent_name || latest.parent_email || latest.parent_phone) && (
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Parent / Guardian</p>
+                              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                                {latest.parent_name && (
+                                  <span className="font-medium text-gray-700">{latest.parent_name}</span>
+                                )}
+                                {latest.parent_email && (
+                                  <a href={`mailto:${latest.parent_email}`} className="flex items-center gap-1.5 text-gray-600 hover:text-crimson transition">
+                                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                    {latest.parent_email}
+                                  </a>
+                                )}
+                                {latest.parent_phone && (
+                                  <a href={`tel:${latest.parent_phone}`} className="flex items-center gap-1.5 text-gray-600 hover:text-crimson transition">
+                                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                    {latest.parent_phone}
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-2 mb-4">
                         Interaction History
                       </p>
                       <div className="space-y-2 mb-4">
@@ -886,6 +977,41 @@ export default function Dashboard() {
                                       onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                                       className="input text-sm py-2" placeholder="Notes…" />
                                   </FormField>
+                                </div>
+                                <div className="border-t border-gray-100 pt-3 mt-1 mb-3">
+                                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Student Contact</p>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <FormField label="Student Email">
+                                      <input type="email" value={editForm.student_email}
+                                        onChange={(e) => setEditForm({ ...editForm, student_email: e.target.value })}
+                                        className="input text-sm py-2" placeholder="student@email.com" />
+                                    </FormField>
+                                    <FormField label="Student Phone">
+                                      <input type="tel" value={editForm.student_phone}
+                                        onChange={(e) => setEditForm({ ...editForm, student_phone: e.target.value })}
+                                        className="input text-sm py-2" placeholder="(555) 123-4567" />
+                                    </FormField>
+                                  </div>
+                                </div>
+                                <div className="border-t border-gray-100 pt-3 mb-3">
+                                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Parent / Guardian</p>
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <FormField label="Parent Name">
+                                      <input type="text" value={editForm.parent_name}
+                                        onChange={(e) => setEditForm({ ...editForm, parent_name: e.target.value })}
+                                        className="input text-sm py-2" placeholder="Jane Smith" />
+                                    </FormField>
+                                    <FormField label="Parent Email">
+                                      <input type="email" value={editForm.parent_email}
+                                        onChange={(e) => setEditForm({ ...editForm, parent_email: e.target.value })}
+                                        className="input text-sm py-2" placeholder="parent@email.com" />
+                                    </FormField>
+                                    <FormField label="Parent Phone">
+                                      <input type="tel" value={editForm.parent_phone}
+                                        onChange={(e) => setEditForm({ ...editForm, parent_phone: e.target.value })}
+                                        className="input text-sm py-2" placeholder="(555) 987-6543" />
+                                    </FormField>
+                                  </div>
                                 </div>
                                 <div className="flex gap-2">
                                   <button onClick={() => handleEditSave(entry.id)} disabled={editLoading}

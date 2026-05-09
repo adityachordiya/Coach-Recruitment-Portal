@@ -92,6 +92,31 @@ function fireConfetti(type = 'default') {
   }
 }
 
+function buildMailto(prospect, user) {
+  const { latest } = prospect;
+  const emails = [latest.student_email, latest.parent_email].filter(Boolean).join(',');
+  if (!emails) return null;
+
+  const greeting = [latest.contact_name, latest.parent_name].filter(Boolean).join(' and ');
+
+  const subject = encodeURIComponent('Following up — Ascend Speech & Debate 2026');
+
+  const body = encodeURIComponent(
+    `Hi ${greeting},\n\n` +
+    `My name is ${user.first_name} ${user.last_name}, and I'm a coach at Ascend Speech & Debate. ` +
+    `I wanted to personally follow up about our summer camp at the University of the Pacific, July 12–26, 2026.\n\n` +
+    `Ascend is the #1 Congressional Debate camp in the country — every TOC winner this decade has been part of our program. ` +
+    `I genuinely think you'd thrive here.\n\n` +
+    `You can use my referral code ${user.referral_code} at checkout to save $50:\n` +
+    `https://www.ascendspeech.org/ascend-store\n\n` +
+    `Happy to answer any questions — just reply to this email!\n\n` +
+    `${user.first_name} ${user.last_name}\n` +
+    `Ascend Speech & Debate Coach`
+  );
+
+  return `mailto:${emails}?subject=${subject}&body=${body}`;
+}
+
 function groupByProspect(rows) {
   const map = new Map();
   for (const row of rows) {
@@ -232,6 +257,32 @@ export default function Dashboard() {
     }).length,
     [prospects]
   );
+
+  async function handleEmailFollowUp(prospect) {
+    const mailto = buildMailto(prospect, user);
+    if (!mailto) return;
+
+    // Open mail client
+    window.location.href = mailto;
+
+    // Auto-log the email interaction
+    try {
+      const entry = await api.post('/api/coach/outreach', {
+        prospect_id:    prospect.prospect_id,
+        contact_name:   prospect.latest.contact_name,
+        contact_method: 'Email',
+        status:         prospect.latest.status,
+        notes:          'Follow-up email sent',
+        grade:          prospect.latest.grade  || '',
+        school:         prospect.latest.school || '',
+      });
+      setOutreach((prev) => [...prev, entry]);
+      setMilestone('📧 Email sent & logged!');
+      setTimeout(() => setMilestone(null), 3000);
+    } catch (err) {
+      console.error('Failed to log email interaction:', err);
+    }
+  }
 
   async function handleDeleteProspect() {
     if (!confirmDelete) return;
@@ -887,6 +938,14 @@ export default function Dashboard() {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                      {!INACTIVE_STATUSES.includes(latest.status) && (latest.student_email || latest.parent_email) && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEmailFollowUp(prospect); }}
+                          className="text-xs font-semibold text-blue-600 border border-blue-200 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition-all"
+                          title="Send follow-up email">
+                          ✉️ Email
+                        </button>
+                      )}
                       {!INACTIVE_STATUSES.includes(latest.status) && (
                         <button
                           onClick={(e) => { e.stopPropagation(); openFollowUp(prospect); }}

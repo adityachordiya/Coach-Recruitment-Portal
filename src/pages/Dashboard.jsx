@@ -18,6 +18,25 @@ const EMPTY_FORM = {
 
 const CAMP_DATE = new Date('2026-07-12T09:00:00');
 
+const BADGES = [
+  // Outreach volume
+  { id: 'first_contact',    emoji: '🌱', label: 'First Contact',    desc: 'Log your first prospect',       color: 'from-green-50 to-emerald-50   border-green-200',  check: ({ p }) => p >= 1  },
+  { id: 'on_the_board',     emoji: '📣', label: 'On the Board',     desc: 'Reach 5 prospects',             color: 'from-blue-50 to-sky-50         border-blue-200',   check: ({ p }) => p >= 5  },
+  { id: 'hustler',          emoji: '💪', label: 'Hustler',          desc: 'Reach 15 prospects',            color: 'from-purple-50 to-violet-50    border-purple-200', check: ({ p }) => p >= 15 },
+  { id: 'all_star',         emoji: '🌟', label: 'All-Star',         desc: 'Reach 25 prospects',            color: 'from-yellow-50 to-amber-50     border-yellow-200', check: ({ p }) => p >= 25 },
+  // Streak
+  { id: 'on_fire',          emoji: '🔥', label: 'On Fire',          desc: '7-day outreach streak',         color: 'from-orange-50 to-red-50       border-orange-200', check: ({ s }) => s >= 7  },
+  { id: 'inferno',          emoji: '🌋', label: 'Inferno',          desc: '14-day outreach streak',        color: 'from-red-50 to-rose-50         border-red-200',    check: ({ s }) => s >= 14 },
+  // Enrollments
+  { id: 'closer',           emoji: '🏅', label: 'Closer',           desc: 'Get your first enrollment',     color: 'from-amber-50 to-yellow-50     border-amber-200',  check: ({ r }) => r >= 1  },
+  { id: 'double_down',      emoji: '✌️',  label: 'Double Down',      desc: 'Get 2 enrollments',             color: 'from-amber-50 to-orange-50     border-amber-200',  check: ({ r }) => r >= 2  },
+  { id: 'champion',         emoji: '🏆', label: 'Champion',         desc: 'Get 5 enrollments',             color: 'from-yellow-50 to-gold-50      border-yellow-300', check: ({ r }) => r >= 5  },
+  { id: 'legend',           emoji: '👑', label: 'Legend',           desc: 'Get 10 enrollments',            color: 'from-crimson-50 to-red-50      border-crimson-100',check: ({ r }) => r >= 10 },
+  // Methods
+  { id: 'email_master',     emoji: '📧', label: 'Email Master',     desc: 'Send your first email follow-up', color: 'from-sky-50 to-blue-50       border-sky-200',    check: ({ emails }) => emails >= 1 },
+  { id: 'social_butterfly', emoji: '🦋', label: 'Social Butterfly', desc: '10+ Instagram DMs sent',        color: 'from-pink-50 to-fuchsia-50    border-pink-200',   check: ({ dms }) => dms >= 10 },
+];
+
 const RANKS = [
   { label: 'Rookie',  emoji: '🥉', min: 0,  max: 4,        color: 'text-amber-600'  },
   { label: 'Scout',   emoji: '🥈', min: 5,  max: 9,        color: 'text-slate-500'  },
@@ -174,6 +193,7 @@ export default function Dashboard() {
 
   const prevReferralCount = useRef(null);
   const milestoneShown    = useRef(false);
+  const prevEarnedBadges  = useRef(null);
 
   // Camp countdown
   const [countdown, setCountdown] = useState(null);
@@ -241,6 +261,33 @@ export default function Dashboard() {
   }, [referrals, loadingData]);
 
   const streak = useMemo(() => calculateStreak(outreach), [outreach]);
+
+  const badgeStats = useMemo(() => ({
+    p:      groupByProspect(outreach).length,
+    r:      referrals?.total ?? 0,
+    s:      streak,
+    emails: outreach.filter(e => e.contact_method === 'Email' && e.notes === 'Follow-up email sent').length,
+    dms:    outreach.filter(e => e.contact_method === 'Instagram DM').length,
+  }), [outreach, referrals, streak]);
+
+  const earnedBadges = useMemo(() =>
+    BADGES.filter(b => b.check(badgeStats)).map(b => b.id),
+    [badgeStats]
+  );
+
+  // Fire confetti on new badge unlock
+  useEffect(() => {
+    if (loadingData) return;
+    if (prevEarnedBadges.current === null) { prevEarnedBadges.current = earnedBadges; return; }
+    const newOnes = earnedBadges.filter(id => !prevEarnedBadges.current.includes(id));
+    if (newOnes.length > 0) {
+      const badge = BADGES.find(b => b.id === newOnes[0]);
+      confetti({ particleCount: 160, spread: 120, origin: { y: 0.4 }, colors: ['#A51C30', '#D4A017', '#fff'] });
+      setMilestone(`${badge.emoji} Badge unlocked: ${badge.label}!`);
+      setTimeout(() => setMilestone(null), 4000);
+    }
+    prevEarnedBadges.current = earnedBadges;
+  }, [earnedBadges, loadingData]);
 
   const prospects = useMemo(() => {
     let grouped = groupByProspect(outreach);
@@ -757,6 +804,62 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+
+      {/* Badge Shelf */}
+      {!loadingData && (
+        <div className="card shadow-sm p-5 mb-7">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-semibold text-gray-900">Your Badges</h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {earnedBadges.length} of {BADGES.length} earned
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-1.5 w-24 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-crimson rounded-full transition-all duration-700"
+                  style={{ width: `${Math.round((earnedBadges.length / BADGES.length) * 100)}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-400 font-medium">
+                {Math.round((earnedBadges.length / BADGES.length) * 100)}%
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+            {BADGES.map((badge) => {
+              const earned = earnedBadges.includes(badge.id);
+              return (
+                <div
+                  key={badge.id}
+                  title={badge.desc}
+                  className={`relative flex flex-col items-center text-center p-3 rounded-xl border transition-all ${
+                    earned
+                      ? `bg-gradient-to-b ${badge.color} shadow-sm`
+                      : 'bg-gray-50 border-gray-100'
+                  }`}
+                >
+                  <span className={`text-2xl mb-1.5 transition-all ${earned ? '' : 'opacity-25 grayscale'}`}
+                    style={{ filter: earned ? '' : 'grayscale(1)' }}>
+                    {badge.emoji}
+                  </span>
+                  <p className={`text-xs font-semibold leading-tight ${earned ? 'text-gray-800' : 'text-gray-300'}`}>
+                    {badge.label}
+                  </p>
+                  {earned && (
+                    <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-green-400 rounded-full flex items-center justify-center">
+                      <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                      </svg>
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Prospects Panel */}
       <div className="card shadow-sm overflow-hidden">

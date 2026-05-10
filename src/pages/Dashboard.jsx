@@ -805,62 +805,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Badge Shelf */}
-      {!loadingData && (
-        <div className="card shadow-sm p-5 mb-7">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-semibold text-gray-900">Your Badges</h2>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {earnedBadges.length} of {BADGES.length} earned
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-1.5 w-24 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-crimson rounded-full transition-all duration-700"
-                  style={{ width: `${Math.round((earnedBadges.length / BADGES.length) * 100)}%` }}
-                />
-              </div>
-              <span className="text-xs text-gray-400 font-medium">
-                {Math.round((earnedBadges.length / BADGES.length) * 100)}%
-              </span>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-            {BADGES.map((badge) => {
-              const earned = earnedBadges.includes(badge.id);
-              return (
-                <div
-                  key={badge.id}
-                  title={badge.desc}
-                  className={`relative flex flex-col items-center text-center p-3 rounded-xl border transition-all ${
-                    earned
-                      ? `bg-gradient-to-b ${badge.color} shadow-sm`
-                      : 'bg-gray-50 border-gray-100'
-                  }`}
-                >
-                  <span className={`text-2xl mb-1.5 transition-all ${earned ? '' : 'opacity-25 grayscale'}`}
-                    style={{ filter: earned ? '' : 'grayscale(1)' }}>
-                    {badge.emoji}
-                  </span>
-                  <p className={`text-xs font-semibold leading-tight ${earned ? 'text-gray-800' : 'text-gray-300'}`}>
-                    {badge.label}
-                  </p>
-                  {earned && (
-                    <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-green-400 rounded-full flex items-center justify-center">
-                      <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
-                      </svg>
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Prospects Panel */}
       <div className="card shadow-sm overflow-hidden">
         {/* Header */}
@@ -1271,6 +1215,62 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Badge Shelf */}
+      {!loadingData && (
+        <div className="card shadow-sm p-5 mt-7">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-semibold text-gray-900">Your Badges</h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {earnedBadges.length} of {BADGES.length} earned
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-1.5 w-24 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-crimson rounded-full transition-all duration-700"
+                  style={{ width: `${Math.round((earnedBadges.length / BADGES.length) * 100)}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-400 font-medium">
+                {Math.round((earnedBadges.length / BADGES.length) * 100)}%
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+            {BADGES.map((badge) => {
+              const earned = earnedBadges.includes(badge.id);
+              return (
+                <div
+                  key={badge.id}
+                  title={badge.desc}
+                  className={`relative flex flex-col items-center text-center p-3 rounded-xl border transition-all ${
+                    earned
+                      ? `bg-gradient-to-b ${badge.color} shadow-sm`
+                      : 'bg-gray-50 border-gray-100'
+                  }`}
+                >
+                  <span className={`text-2xl mb-1.5 transition-all ${earned ? '' : 'opacity-25'}`}
+                    style={{ filter: earned ? '' : 'grayscale(1)' }}>
+                    {badge.emoji}
+                  </span>
+                  <p className={`text-xs font-semibold leading-tight ${earned ? 'text-gray-800' : 'text-gray-300'}`}>
+                    {badge.label}
+                  </p>
+                  {earned && (
+                    <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-green-400 rounded-full flex items-center justify-center">
+                      <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                      </svg>
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

@@ -367,10 +367,18 @@ export default function Resources() {
             <p className="font-semibold text-lg">Aditya Chordiya</p>
             <p className="text-gray-400 text-sm">Chief Operating Officer, Ascend Speech & Debate</p>
             <div className="flex flex-col sm:flex-row gap-3 mt-4">
-              <a href="mailto:aditya.chordiya@ascendspeech.org" className="flex items-center gap-2 text-sm text-white bg-white/10 hover:bg-white/20 px-4 py-2.5 rounded-lg transition">
+              <a
+                href="mailto:aditya.chordiya@ascendspeech.org"
+                onClick={(e) => { e.stopPropagation(); window.location.href = 'mailto:aditya.chordiya@ascendspeech.org'; }}
+                className="flex items-center gap-2 text-sm text-white bg-white/10 hover:bg-white/20 px-4 py-2.5 rounded-lg transition cursor-pointer"
+              >
                 📧 aditya.chordiya@ascendspeech.org
               </a>
-              <a href="tel:5103619408" className="flex items-center gap-2 text-sm text-white bg-white/10 hover:bg-white/20 px-4 py-2.5 rounded-lg transition">
+              <a
+                href="tel:5103619408"
+                onClick={(e) => { e.stopPropagation(); window.location.href = 'tel:5103619408'; }}
+                className="flex items-center gap-2 text-sm text-white bg-white/10 hover:bg-white/20 px-4 py-2.5 rounded-lg transition cursor-pointer"
+              >
                 📱 510-361-9408
               </a>
             </div>

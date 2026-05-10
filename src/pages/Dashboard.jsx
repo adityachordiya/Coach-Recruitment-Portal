@@ -265,7 +265,7 @@ export default function Dashboard() {
     // Open mail client
     window.location.href = mailto;
 
-    // Auto-log the email interaction
+    // Auto-log the email interaction — carry contact fields forward so button stays visible
     try {
       const entry = await api.post('/api/coach/outreach', {
         prospect_id:    prospect.prospect_id,
@@ -273,8 +273,13 @@ export default function Dashboard() {
         contact_method: 'Email',
         status:         prospect.latest.status,
         notes:          'Follow-up email sent',
-        grade:          prospect.latest.grade  || '',
-        school:         prospect.latest.school || '',
+        grade:          prospect.latest.grade         || '',
+        school:         prospect.latest.school        || '',
+        student_email:  prospect.latest.student_email || '',
+        student_phone:  prospect.latest.student_phone || '',
+        parent_name:    prospect.latest.parent_name   || '',
+        parent_email:   prospect.latest.parent_email  || '',
+        parent_phone:   prospect.latest.parent_phone  || '',
       });
       setOutreach((prev) => [...prev, entry]);
       setMilestone('📧 Email sent & logged!');

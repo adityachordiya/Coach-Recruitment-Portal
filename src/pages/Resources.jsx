@@ -262,7 +262,7 @@ export default function Resources() {
                   {[
                     { name: '2 Week – Residential (Most Popular)', price: '$3,599.99', dates: 'July 12–26, 2026', highlight: true },
                     { name: '2 Week – Residential with 1-on-1 Package (Limited to first 10 students)', price: '$4,599.99', dates: 'July 12–26, 2026' },
-                    { name: '2 Week – Residential for Summer \'26 & \'27 (~$2,999.99 per summer)', price: '$5,999.99', dates: 'July 12–26 + July 11–25, 2027' },
+                    { name: '2 Week – Residential for Summer \'26 & \'27 (~$3,250 per summer)', price: '$6,500', dates: 'July 12–26 + July 11–25, 2027' },
                     { name: '1 Week – Residential', price: '$2,599.99', dates: 'July 12–19, 2026' },
                     { name: '2 Week – Commuter', price: '$2,599.99', dates: 'July 12–26, 2026' },
                     { name: '1 Week – Commuter', price: '$1,999.99', dates: 'July 12–19, 2026' },

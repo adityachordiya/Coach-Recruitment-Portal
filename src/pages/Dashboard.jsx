@@ -64,6 +64,77 @@ const BRISTLES = [
 
 const INACTIVE_STATUSES = ['Enrolled', 'Not Interested'];
 
+// The funnel in the order a prospect moves through it (the pipeline strip).
+const FUNNEL = ['Reached Out', 'No Response', 'Interested', 'Connected with Ascend Admin', 'Enrolled'];
+
+// Enrollment milestones (goal gradient: the next rung always shows "N to go").
+const MILESTONES = [1, 3, 5, 10, 15];
+
+// When a prospect at each stage is due a follow-up, in days since last touch,
+// and what to say about it. Interested and Connected go cold fastest.
+const FOLLOW_UP_RULES = {
+  'Interested':                  { after: 3, priority: 0, say: (n, d) => `${n} said they were interested ${d} days ago. A quick text keeps it warm.` },
+  'Connected with Ascend Admin': { after: 4, priority: 1, say: (n, d) => `Check in with ${n}: see if they have questions after talking with Ascend (${d} days).` },
+  'Reached Out':                 { after: 5, priority: 2, say: (n, d) => `No reply from ${n} in ${d} days. Try a different channel, or reach a parent.` },
+  'No Response':                 { after: 7, priority: 3, say: (n, d) => `${n} hasn't replied in ${d} days. One more friendly nudge?` },
+};
+
+const STORE_URL = 'https://www.ascendspeech.org/ascend-store';
+
+// Ready-to-send messages for the share kit. Each leads with what the family
+// gets (the $50), not what the coach earns.
+function shareTemplates(user) {
+  const me = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim();
+  const code = user?.referral_code ?? '';
+  return [
+    { id: 'dm', label: 'Instagram DM', icon: 'send', text:
+      `Hey! I'm coaching at Ascend this summer, the Congress camp I'd recommend to anyone serious about debate. If you're thinking about camp, my code ${code} saves your family $50: ${STORE_URL}\n\nHappy to answer anything!` },
+    { id: 'text', label: 'Text to a parent', icon: 'phone', text:
+      `Hi, this is ${me}. I coach Congressional Debate at Ascend Speech & Debate. I think your student would get a lot out of our summer camp, and the code ${code} saves your family $50 when you register: ${STORE_URL}\n\nGlad to answer any questions.` },
+    { id: 'email', label: 'Email to a parent', icon: 'mail', subject: 'Ascend Speech & Debate this summer', text:
+      `Hi,\n\nI'm ${me}, a coach at Ascend Speech & Debate. Ascend is the largest Congressional Debate camp in the country, and every TOC Congress champion this decade has been part of the program.\n\nIf your student is thinking about camp this summer, my code ${code} saves your family $50 at registration: ${STORE_URL}\n\nI'm happy to answer any questions, just reply here.\n\n${me}\nAscend Speech & Debate` },
+  ];
+}
+
+// Monday of the week a date falls in, as YYYY-MM-DD (local time).
+function weekKey(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return `${x.getFullYear()}-${x.getMonth() + 1}-${x.getDate()}`;
+}
+
+// Consecutive weeks with at least one logged interaction. This week counts
+// once something is logged; until then the run is measured to last week, so
+// a quiet Monday never shows a broken streak.
+function calculateWeeklyStreak(outreach) {
+  if (!outreach.length) return 0;
+  const weeks = new Set(outreach.map((o) => weekKey(o.created_at)));
+  const cursor = new Date();
+  if (!weeks.has(weekKey(cursor))) cursor.setDate(cursor.getDate() - 7);
+  let n = 0;
+  while (weeks.has(weekKey(cursor)) && n < 60) { n++; cursor.setDate(cursor.getDate() - 7); }
+  return n;
+}
+
+function shortStudent(full) {
+  const parts = String(full || '').trim().split(/\s+/);
+  return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0] || 'Student';
+}
+
+// Fill of the milestone line: each gap between rungs is an equal share.
+function milestoneProgress(n) {
+  if (n <= MILESTONES[0]) return n >= MILESTONES[0] ? 0 : 0;
+  if (n >= MILESTONES[MILESTONES.length - 1]) return 1;
+  const i = MILESTONES.findIndex((m, k) => n >= m && n < MILESTONES[k + 1]);
+  const within = (n - MILESTONES[i]) / (MILESTONES[i + 1] - MILESTONES[i]);
+  return (i + within) / (MILESTONES.length - 1);
+}
+
+function shortName(first, last) {
+  return `${first ?? ''}${last ? ` ${last[0]}.` : ''}`.trim();
+}
+
 function daysSince(dateStr) {
   if (!dateStr) return null;
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -189,6 +260,9 @@ export default function Dashboard() {
   const [editLoading, setEditLoading] = useState(false);
 
   const [copied,         setCopied]         = useState(false);
+  const [shareOpen,      setShareOpen]      = useState(false);
+  const [sharedCopy,     setSharedCopy]     = useState(null);
+  const [hasShared,      setHasShared]      = useState(false);
   const [filterStatus,   setFilterStatus]   = useState('');
   const [filterGrade,    setFilterGrade]     = useState('');
   const [milestone,      setMilestone]      = useState(null);
@@ -412,11 +486,47 @@ export default function Dashboard() {
     clearTimeout(birdStopRef.current);
   }, []);
 
+  const sharedKey = `shared_code_${user?.referral_code}`;
+  useEffect(() => { if (user?.referral_code) setHasShared(!!localStorage.getItem(sharedKey)); }, [sharedKey, user]);
+  function markShared() {
+    localStorage.setItem(sharedKey, '1');
+    setHasShared(true);
+  }
+
   function copyCode() {
     navigator.clipboard.writeText(user?.referral_code || '').then(() => {
       setCopied(true);
+      markShared();
       setTimeout(() => setCopied(false), 2000);
     });
+  }
+
+  function copyTemplate(t) {
+    navigator.clipboard.writeText(t.text).then(() => {
+      setSharedCopy(t.id);
+      markShared();
+      setTimeout(() => setSharedCopy(null), 2000);
+    });
+  }
+
+  function jumpToFollowUp(prospect) {
+    setFilterStatus('');
+    setFilterGrade('');
+    openFollowUp(prospect);
+    setTimeout(() => document.getElementById(`p-${prospect.prospect_id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  }
+
+  useEffect(() => {
+    if (!shareOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') setShareOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [shareOpen]);
+
+  function openAddProspect() {
+    setShowAddForm(true);
+    setFormError('');
+    setTimeout(() => document.getElementById('prospects')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
 
   async function handleAddSubmit(e) {
@@ -517,6 +627,54 @@ export default function Dashboard() {
       : "Every conversation could change a student's summer. Keep going!";
   })();
 
+  const weeklyStreak = useMemo(() => calculateWeeklyStreak(outreach), [outreach]);
+  const enrolled     = referrals?.total ?? 0;
+  const earned       = referrals?.earned_dollars ?? 0;
+  const owed         = referrals?.balance_dollars ?? 0;
+  const paid         = Math.max(0, earned - owed);
+
+  // Today: the follow-ups worth doing now, most valuable first.
+  const todayQueue = useMemo(() => allProspects
+    .map((p) => {
+      const rule = FOLLOW_UP_RULES[p.latest.status];
+      const d = daysSince(p.latest.created_at);
+      return rule && d !== null && d >= rule.after ? { prospect: p, days: d, rule } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.rule.priority - b.rule.priority || b.days - a.days), [allProspects]);
+
+  const hasFollowUp = allProspects.some((p) => p.interactions.length > 1);
+  const gettingStarted = [
+    { label: 'Account set up',   done: true },
+    { label: 'Code ready',       done: true },
+    { label: 'Share your code',  done: hasShared || enrolled > 0, action: () => setShareOpen(true) },
+    { label: 'Log 3 prospects',  done: prospectCount >= 3, action: openAddProspect },
+    { label: 'Log a follow-up',  done: hasFollowUp },
+  ];
+  const startedDone = gettingStarted.filter((g) => g.done).length;
+
+  const nextMilestone = MILESTONES.find((m) => m > enrolled);
+
+  // Team board ranked on effort (outreach logged), not enrollments: the top
+  // three plus the coaches either side of you, never the whole list.
+  const team = useMemo(() => {
+    const byEffort = [...leaderboard].sort((a, b) =>
+      (b.outreach_count ?? 0) - (a.outreach_count ?? 0) || (b.referral_count ?? 0) - (a.referral_count ?? 0));
+    const meIdx = byEffort.findIndex((c) => c.referral_code === user?.referral_code);
+    const keep = new Set([0, 1, 2, meIdx - 1, meIdx, meIdx + 1].filter((i) => i >= 0 && i < byEffort.length));
+    const rows = [];
+    let last = -1;
+    [...keep].sort((a, b) => a - b).forEach((i) => {
+      if (last >= 0 && i > last + 1) rows.push({ gap: true, key: `gap-${i}` });
+      rows.push({ ...byEffort[i], place: i + 1, me: i === meIdx, key: byEffort[i].referral_code });
+      last = i;
+    });
+    return { rows, size: byEffort.length };
+  }, [leaderboard, user]);
+
+  const templates = shareTemplates(user);
+  const nextBadge = BADGES.find((b) => !earnedBadges.includes(b.id));
+
   return (
     <Layout>
       {/* Flying broomstick + mascot overlay */}
@@ -602,33 +760,27 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Milestone Toast */}
+      {/* Milestone toast */}
       {milestone && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-semibold px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 animate-bounce">
+        <div role="status" className="fixed top-20 left-1/2 z-50 animate-toast bg-ink text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-lift flex items-center gap-2 max-w-[92vw]">
           {milestone}
         </div>
       )}
 
       {/* Delete Prospect Modal */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
-            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div role="dialog" aria-label="Delete prospect" className="bg-white rounded-2xl shadow-lift p-6 max-w-sm w-full">
+            <div className="w-11 h-11 rounded-full bg-crimson-50 text-crimson flex items-center justify-center mb-4">
+              <Icon name="trash" className="w-5 h-5" />
             </div>
-            <h3 className="font-bold text-gray-900 text-lg text-center mb-1">Delete prospect?</h3>
-            <p className="text-sm text-gray-500 text-center mb-6">
-              This will permanently delete <span className="font-semibold text-gray-800">{confirmDelete.name}</span> and all their interaction history.
+            <h3 className="font-display text-xl font-semibold text-ink mb-1">Delete this prospect?</h3>
+            <p className="text-sm text-ink-muted mb-6">
+              <span className="font-semibold text-ink">{confirmDelete.name}</span> and their whole interaction history will be deleted. This can't be undone.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmDelete(null)}
-                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
-                Cancel
-              </button>
-              <button onClick={handleDeleteProspect} disabled={deleting}
-                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition disabled:opacity-60">
+              <button onClick={() => setConfirmDelete(null)} className="btn-outline flex-1 px-4 py-2.5 text-sm">Cancel</button>
+              <button onClick={handleDeleteProspect} disabled={deleting} className="btn-primary flex-1 px-4 py-2.5 text-sm">
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>
             </div>
@@ -636,219 +788,165 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="mb-7 flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <img
-            src="/mascot.png"
-            alt="Ascend"
-            onClick={launchBird}
-            className={`w-16 h-16 object-contain hidden sm:block cursor-pointer hover:scale-110 transition-transform ${birdFlying ? 'opacity-0' : 'animate-float'}`}
-          />
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Hey, {user?.first_name}! {isLeader ? '🏆' : '👋'}
-            </h1>
-            {/* Rank badge + progress bar */}
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="text-base leading-none">{rank.emoji}</span>
-              <span className={`text-sm font-bold ${rank.color}`}>{rank.label}</span>
-              {nextRank && (
-                <>
-                  <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-crimson rounded-full transition-all duration-700"
-                      style={{ width: `${rankProgress}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-400">
-                    {nextRank.min - prospectCount} to {nextRank.emoji} {nextRank.label}
-                  </span>
-                </>
-              )}
-            </div>
-            {/* Motivational line */}
-            <p className="text-sm text-gray-500 mt-1">{motivation}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-          {/* Daily goal pill */}
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
-            loggedToday
-              ? 'bg-green-50 border-green-200'
-              : 'bg-gray-50 border-gray-200'
-          }`}>
-            <span className="text-lg">{loggedToday ? '✅' : '📋'}</span>
-            <div>
-              <p className={`text-sm font-bold leading-tight ${loggedToday ? 'text-green-700' : 'text-gray-700'}`}>
-                {loggedToday ? 'Daily goal done!' : 'Daily goal: 0/1'}
-              </p>
-              <p className={`text-xs ${loggedToday ? 'text-green-400' : 'text-gray-400'}`}>
-                Log 1 prospect today
+      {/* Greeting band */}
+      <section className="relative overflow-hidden rounded-2xl bg-ink text-white mb-5 shadow-lift">
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(110% 150% at 100% 0%, rgba(189,31,46,0.62) 0%, rgba(189,31,46,0.14) 42%, rgba(189,31,46,0) 66%)' }} />
+        <div className="relative px-5 sm:px-8 py-6 sm:py-7 flex flex-col lg:flex-row lg:items-center gap-5 lg:gap-8">
+          <div className="flex items-start gap-4 flex-1 min-w-0">
+            <img
+              src="/mascot.png"
+              alt="Ascend"
+              onClick={launchBird}
+              className={`w-14 h-14 object-contain hidden sm:block cursor-pointer shrink-0 hover:scale-110 transition-transform ${birdFlying ? 'opacity-0' : ''}`}
+            />
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/50">{greeting()}</p>
+              <h1 className="font-display text-[30px] sm:text-[36px] font-semibold leading-[1.1] tracking-tight mt-1">
+                Welcome back{user?.first_name ? `, ${user.first_name}` : ''}
+              </h1>
+              <p className="text-white/80 text-sm sm:text-[15px] mt-2 max-w-xl leading-relaxed">
+                {enrolled > 0
+                  ? `You've brought ${enrolled} student${enrolled === 1 ? '' : 's'} to Ascend so far. `
+                  : 'Your first enrollment earns you $100, and that family saves $50. '}
+                <span className="text-white/55">{motivation}</span>
               </p>
             </div>
           </div>
-          {/* Streak pill */}
-          {streak > 0 && (
-            <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 px-3 py-2 rounded-xl">
-              <span className="text-lg">🔥</span>
-              <div>
-                <p className="text-sm font-bold text-orange-700">{streak} day streak</p>
-                <p className="text-xs text-orange-400">Keep it up!</p>
-              </div>
-            </div>
-          )}
+          <div className="grid grid-cols-3 gap-2.5 lg:w-[420px] shrink-0">
+            <HeroStat label="Today" icon={loggedToday ? 'check' : 'target'} good={loggedToday}
+              value={loggedToday ? 'Done' : '0 / 1'} sub="Log one prospect" />
+            <HeroStat label="Streak" icon="flame"
+              value={`${weeklyStreak} wk${weeklyStreak === 1 ? '' : 's'}`} sub={weeklyStreak ? 'Active weeks in a row' : 'Log one to start'} />
+            <HeroStat label="Rank" emoji={rank.emoji}
+              value={rank.label} sub={nextRank ? `${nextRank.min - prospectCount} to ${nextRank.label}` : 'Top rank'} />
+          </div>
         </div>
-      </div>
+        {countdown && (
+          <div className="relative border-t border-white/10 px-5 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span className="text-white/60 inline-flex items-center gap-2"><Icon name="calendar" className="w-4 h-4" />Ascend California 2026 · July 12–26 · University of the Pacific</span>
+            <span className="num text-white font-semibold">{countdown.days} days to go</span>
+          </div>
+        )}
+      </section>
 
-      {/* Camp Countdown */}
-      {countdown && (
-        <div
-          className="mb-6 rounded-2xl overflow-hidden shadow-sm"
-          style={{
-            background: `linear-gradient(to right, rgba(5,0,2,0.92) 0%, rgba(5,0,2,0.80) 30%, rgba(120,15,28,0.50) 62%, rgba(165,28,48,0.28) 100%), url('/camp-photo.jpg') center 70%/cover no-repeat`,
-          }}
-        >
-          <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Getting started: two steps already done (endowed progress) */}
+      {!loadingData && startedDone < gettingStarted.length && (
+        <section className="card p-4 sm:p-5 mb-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
-              <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-0.5">Camp starts in</p>
-              <p className="text-white font-bold text-lg leading-tight">Ascend California 2026</p>
-              <p className="text-white/45 text-xs mt-0.5">July 12–26 · University of the Pacific</p>
+              <h2 className="font-display text-lg font-semibold text-ink">Getting started</h2>
+              <p className="text-xs text-ink-muted mt-0.5">{startedDone} of {gettingStarted.length} done. Finish these and you're set for the season.</p>
             </div>
-            <div className="flex items-end gap-2 sm:gap-3 shrink-0">
-              {[
-                { value: countdown.days,    label: 'days' },
-                { value: countdown.hours,   label: 'hrs'  },
-                { value: countdown.minutes, label: 'min'  },
-                { value: countdown.seconds, label: 'sec'  },
-              ].map(({ value, label }, i) => (
-                <React.Fragment key={label}>
-                  {i > 0 && <span className="text-white/30 font-bold text-2xl mb-5 -mx-1">:</span>}
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="bg-black/40 backdrop-blur-sm border border-white/20 rounded-xl px-3 py-2 min-w-[52px] text-center">
-                      <span className="text-white font-bold text-2xl tabular-nums font-mono leading-none">
-                        {String(value).padStart(2, '0')}
-                      </span>
-                    </div>
-                    <span className="text-white/40 text-xs uppercase tracking-widest">{label}</span>
-                  </div>
-                </React.Fragment>
-              ))}
+            <div className="w-40 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full bg-crimson rounded-full transition-all duration-700" style={{ width: `${Math.round((startedDone / gettingStarted.length) * 100)}%` }} />
             </div>
           </div>
-        </div>
+          <ol className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {gettingStarted.map((g, i) => (
+              <li key={g.label}>
+                <button
+                  type="button"
+                  disabled={g.done || !g.action}
+                  onClick={g.action}
+                  className={`w-full h-full flex items-center gap-2 text-left text-[13px] px-3 py-2.5 rounded-lg border transition-colors ${
+                    g.done
+                      ? 'bg-emerald-50/60 border-emerald-100 text-emerald-800'
+                      : g.action ? 'bg-white border-gray-200 text-ink hover:border-crimson/40' : 'bg-white border-gray-200 text-ink'
+                  }`}>
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${g.done ? 'bg-emerald-500 text-white' : 'border border-gray-300 text-ink-muted text-[10px] font-bold'}`}>
+                    {g.done ? <Icon name="check" className="w-3 h-3" strokeWidth={3} /> : i + 1}
+                  </span>
+                  <span className="truncate">{g.label}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        </section>
       )}
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
-        {/* Referral Code */}
-        <div className="card p-5 shadow-sm col-span-2 lg:col-span-1">
-          <div className="flex items-start justify-between mb-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Your Referral Code</p>
-            <div className="w-8 h-8 rounded-lg bg-crimson-50 flex items-center justify-center">
-              <svg className="w-4 h-4 text-crimson" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-              </svg>
-            </div>
-          </div>
-          <p className="text-2xl font-bold tracking-widest text-crimson font-mono mb-1">{user?.referral_code || '—'}</p>
-          <p className="text-xs text-gray-400 mb-3">Students save $50 when they use this code.</p>
-          <button onClick={copyCode}
-            className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-all ${
-              copied
-                ? 'bg-green-50 border-green-200 text-green-700'
-                : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}>
-            {copied ? '✓ Copied!' : 'Copy code'}
-          </button>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr] gap-5 lg:gap-6 items-start">
 
-        {/* Earnings — headline stat in gold */}
-        <div className="card p-5 shadow-sm bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200">
-          <div className="flex items-start justify-between mb-3">
-            <p className="text-xs font-semibold text-yellow-600 uppercase tracking-wide">You've Earned</p>
-            <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center">
-              <span className="text-base">💰</span>
+        {/* Today: the follow-ups worth doing now */}
+        <section className="card overflow-hidden min-w-0 lg:col-start-1 lg:row-start-1">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-gray-100">
+            <div>
+              <h2 className="font-display text-xl font-semibold text-ink">Today</h2>
+              <p className="text-xs text-ink-muted mt-0.5">
+                {loadingData ? '…' : todayQueue.length ? `${todayQueue.length} follow-up${todayQueue.length === 1 ? '' : 's'} due` : 'Nothing overdue'}
+              </p>
             </div>
-          </div>
-          <div className="flex items-end gap-1 mb-1">
-            <span className="text-3xl font-bold text-yellow-600 tabular-nums">
-              {loadingData ? '—' : `$${(referrals?.earned_dollars ?? 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+            <span className={`badge ${loggedToday ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-white text-ink-muted ring-gray-200'}`}>
+              <Icon name={loggedToday ? 'check' : 'target'} className="w-3 h-3" />
+              {loggedToday ? 'Daily goal done' : 'Daily goal: log 1 prospect'}
             </span>
           </div>
-          <p className="text-xs text-yellow-600/70">
-            {loadingData ? '' : referrals?.balance_dollars > 0
-              ? `$${referrals.balance_dollars.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} available to redeem`
-              : 'Keep recruiting to earn more!'}
-          </p>
-        </div>
-
-        {/* Enrolled */}
-        <div className="card p-5 shadow-sm">
-          <div className="flex items-start justify-between mb-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Enrolled</p>
-            <div className="w-8 h-8 rounded-lg bg-gold-50 flex items-center justify-center">
-              <svg className="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
+          {loadingData ? (
+            <div className="px-6 py-8 text-sm text-ink-muted">Loading…</div>
+          ) : todayQueue.length === 0 ? (
+            <div className="px-5 sm:px-6 py-5 flex flex-wrap items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <Icon name="check" className="w-4 h-4" strokeWidth={2.5} />
+              </div>
+              <p className="text-sm text-ink-soft flex-1 min-w-[12rem]">
+                You're all caught up. Nice work.{!loggedToday && ' Log one new prospect to keep your week going.'}
+              </p>
+              {!loggedToday && (
+                <button onClick={openAddProspect} className="btn-soft"><Icon name="plus" className="w-3.5 h-3.5" />Add prospect</button>
+              )}
             </div>
-          </div>
-          <div className="flex items-end gap-1.5 mb-1">
-            <span className="text-3xl font-bold text-gold tabular-nums">{loadingData ? '—' : referrals?.total ?? 0}</span>
-            <span className="text-gray-400 text-sm mb-1">students</span>
-          </div>
-          <p className="text-xs text-gray-400">Signed up using your code.</p>
-        </div>
-
-        {/* Follow-up */}
-        <div className={`card p-5 shadow-sm ${needFollowUpCount > 0 ? 'border-red-200 bg-red-50' : ''}`}>
-          <div className="flex items-start justify-between mb-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Need Follow-up</p>
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-              needFollowUpCount > 0 ? 'bg-red-100' : 'bg-gray-100'
-            }`}>
-              <svg className={`w-4 h-4 ${needFollowUpCount > 0 ? 'text-red-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-            </div>
-          </div>
-          <div className="flex items-end gap-1.5 mb-1">
-            <span className={`text-3xl font-bold tabular-nums ${needFollowUpCount > 0 ? 'text-red-500' : 'text-gray-300'}`}>
-              {loadingData ? '—' : needFollowUpCount}
-            </span>
-            <span className="text-gray-400 text-sm mb-1">prospects</span>
-          </div>
-          <p className="text-xs text-gray-400">
-            {needFollowUpCount > 0 ? 'No contact in 7+ days.' : "You're all caught up! 🎉"}
-          </p>
-        </div>
-      </div>
-
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {todayQueue.slice(0, 5).map(({ prospect, days, rule }) => (
+                <li key={prospect.prospect_id} className="flex items-center gap-3 px-5 sm:px-6 py-3">
+                  <div className="w-8 h-8 rounded-full bg-crimson-50 text-crimson flex items-center justify-center shrink-0">
+                    <span className="text-[11px] font-bold">{initialsOf(prospect.latest.contact_name)}</span>
+                  </div>
+                  <p className="flex-1 min-w-0 text-sm text-ink-soft">
+                    {rule.say(String(prospect.latest.contact_name || '').split(' ')[0], days)}
+                  </p>
+                  <div className="flex gap-1.5 shrink-0">
+                    {(prospect.latest.student_email || prospect.latest.parent_email) && (
+                      <button className="btn-soft" onClick={() => handleEmailFollowUp(prospect)} title="Email (opens Gmail)" aria-label="Email">
+                        <Icon name="mail" className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button className="btn-soft" onClick={() => jumpToFollowUp(prospect)}>
+                      <Icon name="reply" className="w-3.5 h-3.5" /><span className="hidden sm:inline">Log</span>
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {todayQueue.length > 5 && (
+            <p className="px-5 sm:px-6 py-2.5 text-xs text-ink-muted border-t border-gray-100">
+              {todayQueue.length - 5} more in your pipeline below.
+            </p>
+          )}
+        </section>
 
       {/* Prospects Panel */}
-      <div className="card shadow-sm overflow-hidden">
+        <section id="prospects" className="card overflow-hidden min-w-0 scroll-mt-20 lg:col-start-1 lg:row-start-2">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-gray-100">
           <div>
-            <h2 className="font-semibold text-gray-900">Prospects</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{outreach.length === 0 ? 'No prospects yet' : `${groupByProspect(outreach).length} total`}</p>
+            <h2 className="font-display text-xl font-semibold text-ink">Your pipeline</h2>
+            <p className="text-xs text-ink-muted mt-0.5">{allProspects.length === 0 ? 'No prospects yet' : `${allProspects.length} prospect${allProspects.length === 1 ? '' : 's'} · ${enrolled} enrolled with your code`}</p>
           </div>
           <button
             onClick={() => { setShowAddForm((v) => !v); setFormError(''); }}
-            className={`text-sm font-medium px-4 py-2 rounded-xl transition-all ${
-              showAddForm
-                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                : 'bg-crimson text-white hover:bg-crimson-dark shadow-sm'
-            }`}>
-            {showAddForm ? '✕ Cancel' : '+ Add Prospect'}
+            className={`text-sm px-3.5 py-2 ${showAddForm ? 'btn-outline' : 'btn-primary hidden sm:inline-flex'}`}>
+            <Icon name={showAddForm ? 'x' : 'plus'} className="w-4 h-4" />
+            {showAddForm ? 'Cancel' : 'Add prospect'}
           </button>
         </div>
 
         {/* Add Prospect Form */}
         {showAddForm && (
-          <form onSubmit={handleAddSubmit} className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+          <form onSubmit={handleAddSubmit} className="px-5 sm:px-6 py-5 border-b border-gray-100 bg-paper/60">
             {formError && (
-              <div className="mb-4 bg-red-50 border border-red-100 text-red-700 text-sm px-4 py-3 rounded-xl">{formError}</div>
+              <div className="mb-4 bg-crimson-50 border border-crimson-100 text-crimson-dark text-sm px-4 py-3 rounded-lg">{formError}</div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               <FormField label="Contact Name *">
@@ -886,7 +984,7 @@ export default function Dashboard() {
 
             {/* Contact Info */}
             <div className="mt-4 pt-4 border-t border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Student Contact <span className="font-normal normal-case text-gray-300">(optional)</span></p>
+              <p className="eyebrow mb-3">Student Contact <span className="font-normal normal-case text-gray-300">(optional)</span></p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <FormField label="Student Email">
                   <input type="email" value={form.student_email}
@@ -903,7 +1001,7 @@ export default function Dashboard() {
 
             {/* Parent Info */}
             <div className="pt-4 border-t border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Parent / Guardian <span className="font-normal normal-case text-gray-300">(optional)</span></p>
+              <p className="eyebrow mb-3">Parent / Guardian <span className="font-normal normal-case text-gray-300">(optional)</span></p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                 <FormField label="Parent Name">
                   <input type="text" value={form.parent_name}
@@ -923,52 +1021,59 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <button type="submit" disabled={submitting} className="btn-primary px-5 py-2 text-sm">
+            <button type="submit" disabled={submitting} className="btn-primary px-5 py-2.5 text-sm">
               {submitting ? 'Saving…' : 'Add Prospect'}
             </button>
           </form>
         )}
 
-        {/* Filter Bar */}
-        <div className="px-6 py-3 border-b border-gray-100 flex flex-wrap gap-2 items-center bg-gray-50/50">
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-crimson/20 text-gray-600">
-            <option value="">All Statuses</option>
-            {STATUSES.map((s) => <option key={s}>{s}</option>)}
-          </select>
-          <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)}
-            className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-crimson/20 text-gray-600">
-            <option value="">All Grades</option>
-            {GRADES.map((g) => <option key={g}>{g}</option>)}
-          </select>
-          {(filterStatus || filterGrade) && (
-            <button onClick={() => { setFilterStatus(''); setFilterGrade(''); }}
-              className="text-xs text-gray-400 hover:text-crimson transition px-2 py-1.5 rounded-lg hover:bg-crimson-50">
-              × Clear
-            </button>
+        {/* Pipeline strip: a count per stage; a stage filters the list */}
+        <div className="px-5 sm:px-6 py-3 border-b border-gray-100 bg-paper/50">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <StageChip label="All" count={allProspects.length} active={!filterStatus} onClick={() => setFilterStatus('')} />
+            {FUNNEL.map((st) => (
+              <StageChip key={st} label={st === 'Connected with Ascend Admin' ? 'Connected' : st} count={statusCounts[st] || 0}
+                active={filterStatus === st} onClick={() => setFilterStatus(filterStatus === st ? '' : st)} tone={st === 'Enrolled' ? 'win' : undefined} />
+            ))}
+            {(statusCounts['Not Interested'] || 0) > 0 && (
+              <StageChip label="Not interested" count={statusCounts['Not Interested']} active={filterStatus === 'Not Interested'}
+                onClick={() => setFilterStatus(filterStatus === 'Not Interested' ? '' : 'Not Interested')} muted />
+            )}
+            <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} aria-label="Filter by grade"
+              className="ml-auto px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-4 focus:ring-crimson/10 text-ink-soft">
+              <option value="">All grades</option>
+              {GRADES.map((g) => <option key={g}>{g}</option>)}
+            </select>
+          </div>
+          {statusCounts['Interested'] > 0 && (statusCounts['Connected with Ascend Admin'] || 0) === 0 && (
+            <p className="text-xs text-ink-muted mt-2">
+              {statusCounts['Interested']} of your prospects {statusCounts['Interested'] === 1 ? 'is' : 'are'} interested but not yet connected with Ascend. Introducing them is the step that turns interest into an enrollment.
+            </p>
           )}
-          <span className="text-xs text-gray-400 ml-auto font-medium">
-            {prospects.length} {prospects.length === 1 ? 'prospect' : 'prospects'}
-          </span>
         </div>
 
         {/* Prospect List */}
         {loadingData ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <div className="w-6 h-6 border-2 border-crimson border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-gray-400">Loading prospects…</p>
+            <p className="text-sm text-ink-muted">Loading your pipeline…</p>
           </div>
         ) : prospects.length === 0 ? (
           <div className="text-center py-16 px-6">
-            <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4 text-2xl">
-              {outreach.length === 0 ? '📋' : '🔍'}
+            <div className="w-12 h-12 rounded-full bg-navy-50 text-navy flex items-center justify-center mx-auto mb-4">
+              <Icon name={outreach.length === 0 ? 'users' : 'filter'} className="w-5 h-5" />
             </div>
-            <p className="font-medium text-gray-700">
-              {outreach.length === 0 ? 'No prospects yet' : 'No prospects match your filters'}
+            <p className="font-semibold text-ink">
+              {outreach.length === 0 ? 'No prospects yet' : 'Nobody at this stage'}
             </p>
-            <p className="text-sm text-gray-400 mt-1">
-              {outreach.length === 0 ? 'Click "+ Add Prospect" to start tracking your outreach.' : 'Try clearing your filters.'}
+            <p className="text-sm text-ink-muted mt-1 max-w-sm mx-auto">
+              {outreach.length === 0
+                ? "Start with someone you already know: a former teammate's younger sibling, or a student from your old club. Log them here and we'll remind you when to follow up."
+                : 'Pick another stage, or show all.'}
             </p>
+            {outreach.length === 0 && (
+              <button onClick={openAddProspect} className="btn-primary text-sm px-4 py-2 mt-4"><Icon name="plus" className="w-4 h-4" />Add your first prospect</button>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -976,87 +1081,88 @@ export default function Dashboard() {
               const { prospect_id, interactions, latest } = prospect;
               const days      = daysSince(latest.created_at);
               const indicator = followUpIndicator(days, latest.status);
-              const needsFollowUp = indicator?.color.includes('red');
+              const needsFollowUp = indicator?.level === 'due';
               const isExpanded = expandedId === prospect_id;
 
               return (
-                <div key={prospect_id} className={needsFollowUp ? 'bg-red-50/40' : ''}>
+                <div key={prospect_id} id={`p-${prospect_id}`} className={`group scroll-mt-24 ${needsFollowUp ? 'bg-crimson-50/30' : ''}`}>
                   <div
-                    className="flex items-center gap-4 px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 cursor-pointer hover:bg-paper/70 transition-colors"
                     onClick={() => setExpandedId(isExpanded ? null : prospect_id)}
                   >
                     {/* Avatar */}
-                    <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-                      <span className="text-sm font-semibold text-gray-500">
-                        {latest.contact_name?.[0]?.toUpperCase() ?? '?'}
-                      </span>
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${latest.status === 'Enrolled' ? 'bg-emerald-50 text-emerald-700' : 'bg-navy-50 text-navy'}`}>
+                      <span className="text-xs font-bold">{initialsOf(latest.contact_name)}</span>
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-gray-900">{latest.contact_name}</span>
-                        {latest.grade && (
-                          <span className="badge bg-gray-100 text-gray-500 ring-1 ring-gray-200">{latest.grade}</span>
-                        )}
-                        <StatusBadge status={latest.status} />
+                        <span className="font-semibold text-ink">{latest.contact_name}</span>
+                        <StatusBadge status={latest.status} short />
                         {indicator && (
                           <span className={`badge ${indicator.color}`}>{indicator.label}</span>
                         )}
                       </div>
-                      <div className="flex gap-3 mt-0.5 text-xs text-gray-400 flex-wrap">
-                        {latest.school && <span>{latest.school}</span>}
-                        <span>{interactions.length} {interactions.length === 1 ? 'interaction' : 'interactions'}</span>
-                      </div>
+                      <p className="mt-0.5 text-xs text-ink-muted truncate">
+                        {[latest.grade && (latest.grade === 'Other' ? null : `${latest.grade} grade`), latest.school, `${interactions.length} ${interactions.length === 1 ? 'interaction' : 'interactions'}`].filter(Boolean).join(' · ')}
+                      </p>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="hidden sm:flex items-center gap-2 shrink-0">
                       {!INACTIVE_STATUSES.includes(latest.status) && (latest.student_email || latest.parent_email) && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleEmailFollowUp(prospect); }}
-                          className="text-xs font-semibold text-blue-600 border border-blue-200 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition-all"
-                          title="Send follow-up email">
-                          ✉️ Email
+                          className="btn-soft"
+                          title="Email a follow-up (opens Gmail)">
+                          <Icon name="mail" className="w-3.5 h-3.5" /><span className="hidden md:inline">Email</span>
                         </button>
                       )}
                       {!INACTIVE_STATUSES.includes(latest.status) && (
                         <button
                           onClick={(e) => { e.stopPropagation(); openFollowUp(prospect); }}
-                          className="text-xs font-semibold text-crimson border border-crimson/30 bg-crimson-50 px-3 py-1.5 rounded-lg hover:bg-crimson hover:text-white transition-all">
-                          Log Follow-up
+                          className="btn-soft" title="Log a follow-up">
+                          <Icon name="reply" className="w-3.5 h-3.5" /><span className="hidden md:inline">Log follow-up</span>
                         </button>
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); setConfirmDelete({ prospect_id, name: latest.contact_name }); }}
-                        className="p-1.5 text-gray-200 hover:text-red-500 hover:bg-red-50 transition rounded-lg"
-                        title="Delete prospect">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        className="p-1.5 text-gray-300 hover:text-crimson hover:bg-crimson-50 transition rounded-lg md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+                        title="Delete prospect" aria-label="Delete prospect">
+                        <Icon name="trash" className="w-4 h-4" />
                       </button>
-                      <svg className={`w-4 h-4 text-gray-300 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
+                      <Icon name="chevron" className={`w-4 h-4 text-gray-300 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                     </div>
+                    <Icon name="chevron" className={`sm:hidden w-4 h-4 text-gray-300 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                   </div>
 
                   {/* Expanded Timeline */}
                   {isExpanded && (
-                    <div className="px-6 pb-5 bg-gray-50/70 border-t border-gray-100">
+                    <div className="px-4 sm:px-6 pb-5 bg-paper/70 border-t border-gray-100">
+
+                      {/* Phone: the row's actions live here */}
+                      <div className="sm:hidden flex gap-2 pt-4">
+                        {!INACTIVE_STATUSES.includes(latest.status) && (latest.student_email || latest.parent_email) && (
+                          <button onClick={() => handleEmailFollowUp(prospect)} className="btn-outline flex-1 text-sm py-2"><Icon name="mail" className="w-4 h-4" />Email</button>
+                        )}
+                        {!INACTIVE_STATUSES.includes(latest.status) && (
+                          <button onClick={() => openFollowUp(prospect)} className="btn-outline flex-1 text-sm py-2"><Icon name="reply" className="w-4 h-4" />Log follow-up</button>
+                        )}
+                        <button onClick={() => setConfirmDelete({ prospect_id, name: latest.contact_name })} className="btn-outline px-3 py-2 text-ink-muted" aria-label="Delete prospect"><Icon name="trash" className="w-4 h-4" /></button>
+                      </div>
 
                       {/* Contact details card */}
                       {(latest.student_email || latest.student_phone || latest.parent_name || latest.parent_email || latest.parent_phone) && (
-                        <div className="mt-4 mb-4 bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Contact Details</p>
+                        <div className="mt-4 mb-4 bg-white rounded-xl border border-black/[0.07] p-4 shadow-card">
+                          <p className="eyebrow mb-3">Contact Details</p>
                           <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                             {latest.student_email && (
-                              <a href={`mailto:${latest.student_email}`} className="flex items-center gap-1.5 text-gray-600 hover:text-crimson transition">
+                              <a href={`mailto:${latest.student_email}`} className="flex items-center gap-1.5 text-ink-soft hover:text-crimson transition">
                                 <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                                 {latest.student_email}
                               </a>
                             )}
                             {latest.student_phone && (
-                              <a href={`tel:${latest.student_phone}`} className="flex items-center gap-1.5 text-gray-600 hover:text-crimson transition">
+                              <a href={`tel:${latest.student_phone}`} className="flex items-center gap-1.5 text-ink-soft hover:text-crimson transition">
                                 <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                                 {latest.student_phone}
                               </a>
@@ -1064,19 +1170,19 @@ export default function Dashboard() {
                           </div>
                           {(latest.parent_name || latest.parent_email || latest.parent_phone) && (
                             <div className="mt-3 pt-3 border-t border-gray-100">
-                              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Parent / Guardian</p>
+                              <p className="eyebrow mb-2">Parent / Guardian</p>
                               <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                                 {latest.parent_name && (
                                   <span className="font-medium text-gray-700">{latest.parent_name}</span>
                                 )}
                                 {latest.parent_email && (
-                                  <a href={`mailto:${latest.parent_email}`} className="flex items-center gap-1.5 text-gray-600 hover:text-crimson transition">
+                                  <a href={`mailto:${latest.parent_email}`} className="flex items-center gap-1.5 text-ink-soft hover:text-crimson transition">
                                     <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                                     {latest.parent_email}
                                   </a>
                                 )}
                                 {latest.parent_phone && (
-                                  <a href={`tel:${latest.parent_phone}`} className="flex items-center gap-1.5 text-gray-600 hover:text-crimson transition">
+                                  <a href={`tel:${latest.parent_phone}`} className="flex items-center gap-1.5 text-ink-soft hover:text-crimson transition">
                                     <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                                     {latest.parent_phone}
                                   </a>
@@ -1087,14 +1193,14 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-2 mb-4">
+                      <p className="eyebrow pt-2 mb-4">
                         Interaction History
                       </p>
                       <div className="space-y-2 mb-4">
                         {interactions.map((entry, idx) => (
                           <div key={entry.id}>
                             {editingId === entry.id ? (
-                              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                              <div className="bg-white rounded-xl border border-black/[0.07] p-4 shadow-card">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                   <FormField label="Status">
                                     <select value={editForm.status}
@@ -1110,7 +1216,7 @@ export default function Dashboard() {
                                   </FormField>
                                 </div>
                                 <div className="border-t border-gray-100 pt-3 mt-1 mb-3">
-                                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Student Contact</p>
+                                  <p className="eyebrow mb-2">Student Contact</p>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <FormField label="Student Email">
                                       <input type="email" value={editForm.student_email}
@@ -1125,7 +1231,7 @@ export default function Dashboard() {
                                   </div>
                                 </div>
                                 <div className="border-t border-gray-100 pt-3 mb-3">
-                                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Parent / Guardian</p>
+                                  <p className="eyebrow mb-2">Parent / Guardian</p>
                                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <FormField label="Parent Name">
                                       <input type="text" value={editForm.parent_name}
@@ -1165,7 +1271,7 @@ export default function Dashboard() {
                                     <div className="w-px flex-1 min-h-6 bg-gray-200 mt-1" />
                                   )}
                                 </div>
-                                <div className="flex-1 bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+                                <div className="flex-1 bg-white rounded-xl border border-black/[0.07] p-3 shadow-card">
                                   <div className="flex items-center justify-between flex-wrap gap-2">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <StatusBadge status={entry.status} />
@@ -1174,7 +1280,7 @@ export default function Dashboard() {
                                       <span className="text-xs text-gray-400">{formatDate(entry.created_at)}</span>
                                     </div>
                                     <button onClick={() => startEdit(entry)}
-                                      className="text-xs text-gray-300 hover:text-crimson transition font-medium">
+                                      className="text-xs text-ink-muted hover:text-crimson transition font-medium inline-flex items-center gap-1">
                                       Edit
                                     </button>
                                   </div>
@@ -1190,8 +1296,8 @@ export default function Dashboard() {
 
                       {/* Log Follow-up Form */}
                       {followUpFor === prospect_id && (
-                        <form onSubmit={handleFollowUpSubmit} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">New Interaction</p>
+                        <form onSubmit={handleFollowUpSubmit} className="bg-white rounded-xl border border-black/[0.07] p-4 shadow-card">
+                          <p className="eyebrow mb-3">New Interaction</p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                             <FormField label="Contact Method">
                               <select value={followUpForm.contact_method}
@@ -1234,72 +1340,205 @@ export default function Dashboard() {
             })}
           </div>
         )}
+      </section>
+
+        {/* Side rail */}
+        <aside className="space-y-5 min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+
+          {/* Code + share kit */}
+          <section className="relative overflow-hidden rounded-2xl bg-ink text-white p-5 shadow-lift">
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background: 'radial-gradient(100% 120% at 100% 0%, rgba(189,31,46,0.55) 0%, rgba(189,31,46,0) 60%)' }} />
+            <div className="relative">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/50">Your referral code</p>
+              <div className="flex items-center justify-between gap-3 mt-2">
+                <span className="font-mono text-[26px] font-bold tracking-[0.14em]">{user?.referral_code || '—'}</span>
+                <button onClick={copyCode}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+                  <Icon name={copied ? 'check' : 'copy'} className="w-3.5 h-3.5" />{copied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+              <p className="text-white/60 text-xs mt-1">Families save $50 at checkout, and you get the credit.</p>
+              <button onClick={() => setShareOpen(true)}
+                className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-crimson hover:bg-crimson-light text-white text-sm font-semibold rounded-lg py-2.5 transition-colors">
+                <Icon name="send" className="w-4 h-4" />Share kit
+              </button>
+            </div>
+          </section>
+
+          {/* Commission: the coach's own money only, never camp revenue */}
+          <section className="card p-5">
+            <div className="flex items-center justify-between">
+              <p className="eyebrow">Your commission</p>
+              <Icon name="dollar" className="w-4 h-4 text-ink-muted" />
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <Money label="Owed" value={owed} strong={owed > 0} loading={loadingData} />
+              <Money label="Paid" value={paid} loading={loadingData} />
+              <Money label="Earned" value={earned} loading={loadingData} />
+            </div>
+            <p className="text-xs text-ink-muted mt-3 leading-relaxed">
+              {owed > 0
+                ? "Owed means a family enrolled with your code and your payment hasn't gone out yet. Ascend pays by Zelle."
+                : earned > 0
+                  ? 'All paid up. Thank you for bringing families to Ascend.'
+                  : 'Your first enrollment earns you $100, and their family saves $50.'}
+            </p>
+            {referrals?.referrals?.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="eyebrow mb-2">Students you've brought</p>
+                <ul className="space-y-2">
+                  {referrals.referrals.map((r) => (
+                    <li key={r.id} className="flex items-center gap-2.5 text-sm">
+                      <span className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                        <Icon name="check" className="w-3 h-3" strokeWidth={3} />
+                      </span>
+                      <span className="font-medium text-ink truncate flex-1">{shortStudent(r.student_name)}</span>
+                      <span className="text-xs text-ink-muted shrink-0">{r.product}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+
+          {/* Enrollment milestones (goal gradient) */}
+          <section className="card p-5">
+            <div className="flex items-center justify-between">
+              <p className="eyebrow">Enrollment milestones</p>
+              <span className="text-xs font-semibold text-ink">{enrolled} enrolled</span>
+            </div>
+            <div className="relative mt-4">
+              <div className="absolute left-3 right-3 top-3 h-[3px] bg-gray-100 rounded-full" />
+              <div className="absolute left-3 top-3 h-[3px] bg-crimson rounded-full transition-all duration-700"
+                style={{ width: `calc((100% - 1.5rem) * ${milestoneProgress(enrolled)})` }} />
+              <ol className="relative flex justify-between">
+                {MILESTONES.map((m) => (
+                  <li key={m}>
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ring-4 ring-white ${
+                      enrolled >= m ? 'bg-crimson text-white'
+                        : m === nextMilestone ? 'bg-white text-crimson border-2 border-crimson'
+                          : 'bg-gray-100 text-ink-muted'}`}>
+                      {m}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <p className="text-sm text-ink-soft mt-4">
+              {!nextMilestone
+                ? "You've passed every milestone. Legendary."
+                : enrolled === 0
+                  ? 'Your first enrollment is the big one.'
+                  : <><strong className="text-ink">{nextMilestone - enrolled}</strong> more to reach {nextMilestone} enrollments.</>}
+            </p>
+          </section>
+
+          {/* Team board: effort, top three and your neighbours */}
+          {team.size > 1 && (
+            <section className="card p-5">
+              <div className="flex items-center justify-between">
+                <p className="eyebrow">Team board</p>
+                <span className="text-[11px] text-ink-muted">by outreach logged</span>
+              </div>
+              <ol className="mt-3 space-y-1">
+                {team.rows.map((r) => r.gap ? (
+                  <li key={r.key} className="text-center text-gray-300 text-xs leading-3 select-none" aria-hidden="true">···</li>
+                ) : (
+                  <li key={r.key} className={`flex items-center gap-3 px-2.5 py-2 rounded-lg ${r.me ? 'bg-crimson-50 ring-1 ring-inset ring-crimson-100' : ''}`}>
+                    <span className={`w-5 text-center num text-sm font-semibold ${r.place <= 3 ? 'text-ink' : 'text-ink-muted'}`}>{r.place}</span>
+                    <span className={`flex-1 min-w-0 text-sm truncate ${r.me ? 'font-semibold text-ink' : 'text-ink-soft'}`}>
+                      {r.me ? 'You' : shortName(r.first_name, r.last_name)}
+                    </span>
+                    <span className="text-xs text-ink-muted tabular-nums">{r.outreach_count ?? 0} logged</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {/* Badges */}
+          {!loadingData && (
+            <section className="card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="eyebrow">Badges</p>
+                <span className="text-xs text-ink-muted">{earnedBadges.length} of {BADGES.length}</span>
+              </div>
+              <div className="grid grid-cols-4 gap-x-2 gap-y-3">
+                {BADGES.map((badge) => {
+                  const isEarned = earnedBadges.includes(badge.id);
+                  return (
+                    <div key={badge.id} className="group relative flex flex-col items-center text-center">
+                      <div className={`w-11 h-11 rounded-full flex items-center justify-center text-xl ring-1 ring-inset ${isEarned ? badge.color : 'bg-gray-50 ring-gray-200'}`}>
+                        <span style={{ filter: isEarned ? '' : 'grayscale(1)', opacity: isEarned ? 1 : 0.3 }}>{badge.emoji}</span>
+                      </div>
+                      <p className={`text-[10px] leading-tight mt-1.5 font-medium ${isEarned ? 'text-ink' : 'text-gray-400'}`}>{badge.label}</p>
+                      <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 hidden group-hover:flex flex-col items-center">
+                        <div className="bg-ink text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lift text-center">
+                          {isEarned ? <span className="text-emerald-300 font-semibold">Earned</span> : <span>{badge.desc}</span>}
+                        </div>
+                        <div className="w-2 h-2 bg-ink rotate-45 -mt-1" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {nextBadge && (
+                <p className="text-xs text-ink-muted mt-4 pt-3 border-t border-gray-100">
+                  Next up: <span className="font-semibold text-ink">{nextBadge.label}</span>. {nextBadge.desc}.
+                </p>
+              )}
+            </section>
+          )}
+        </aside>
       </div>
 
-      {/* Badge Shelf */}
-      {!loadingData && (
-        <div className="card shadow-sm p-5 mt-7">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-semibold text-gray-900">Your Badges</h2>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {earnedBadges.length} of {BADGES.length} earned
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-1.5 w-24 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-crimson rounded-full transition-all duration-700"
-                  style={{ width: `${Math.round((earnedBadges.length / BADGES.length) * 100)}%` }}
-                />
+      {/* Share kit */}
+      {shareOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-ink/50 backdrop-blur-sm sm:p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShareOpen(false); }}>
+          <div role="dialog" aria-label="Share kit" className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-lift max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-3 px-5 sm:px-6 pt-5 pb-4 border-b border-gray-100 sticky top-0 bg-white">
+              <div>
+                <h2 className="font-display text-xl font-semibold text-ink">Share kit</h2>
+                <p className="text-xs text-ink-muted mt-0.5">Copy, make it yours, send. Messages to parents tend to work best.</p>
               </div>
-              <span className="text-xs text-gray-400 font-medium">
-                {Math.round((earnedBadges.length / BADGES.length) * 100)}%
-              </span>
+              <button onClick={() => setShareOpen(false)} className="p-1.5 rounded-lg text-ink-muted hover:bg-gray-100" aria-label="Close">
+                <Icon name="x" className="w-5 h-5" />
+              </button>
             </div>
-          </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-            {BADGES.map((badge) => {
-              const earned = earnedBadges.includes(badge.id);
-              return (
-                <div
-                  key={badge.id}
-                  className={`group relative flex flex-col items-center text-center p-3 rounded-xl border transition-all ${
-                    earned
-                      ? `bg-gradient-to-b ${badge.color} shadow-sm`
-                      : 'bg-gray-50 border-gray-100'
-                  }`}
-                >
-                  <span className={`text-2xl mb-1.5 transition-all ${earned ? '' : 'opacity-25'}`}
-                    style={{ filter: earned ? '' : 'grayscale(1)' }}>
-                    {badge.emoji}
-                  </span>
-                  <p className={`text-xs font-semibold leading-tight ${earned ? 'text-gray-800' : 'text-gray-300'}`}>
-                    {badge.label}
-                  </p>
-                  {earned && (
-                    <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-green-400 rounded-full flex items-center justify-center">
-                      <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
-                      </svg>
-                    </span>
-                  )}
-                  {/* Hover tooltip */}
-                  <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 hidden group-hover:flex flex-col items-center">
-                    <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-xl max-w-[160px] text-center">
-                      {earned
-                        ? <span className="text-green-400 font-semibold">✓ Earned!</span>
-                        : <span>{badge.desc}</span>
-                      }
+            <div className="px-5 sm:px-6 py-5 space-y-4">
+              {templates.map((t) => (
+                <div key={t.id} className="rounded-xl border border-black/[0.08] overflow-hidden">
+                  <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-paper/70 border-b border-black/[0.06]">
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink"><Icon name={t.icon} className="w-4 h-4 text-ink-muted" />{t.label}</span>
+                    <div className="flex gap-1.5">
+                      {t.id === 'email' && (
+                        <a className="btn-soft" target="_blank" rel="noreferrer"
+                          href={`https://mail.google.com/mail/?view=cm&su=${encodeURIComponent(t.subject)}&body=${encodeURIComponent(t.text)}`}
+                          onClick={markShared}>
+                          <Icon name="mail" className="w-3.5 h-3.5" />Gmail
+                        </a>
+                      )}
+                      <button className="btn-soft" onClick={() => copyTemplate(t)}>
+                        <Icon name={sharedCopy === t.id ? 'check' : 'copy'} className="w-3.5 h-3.5" />{sharedCopy === t.id ? 'Copied' : 'Copy'}
+                      </button>
                     </div>
-                    <div className="w-2 h-2 bg-gray-900 rotate-45 -mt-1" />
                   </div>
+                  <p className="px-4 py-3 text-sm text-ink-soft whitespace-pre-line leading-relaxed">{t.text}</p>
                 </div>
-              );
-            })}
+              ))}
+              <p className="text-xs text-ink-muted">More scripts and talking points live in the <a href="/resources" className="text-crimson font-medium hover:underline">Playbook</a>.</p>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Phone: add a prospect from anywhere */}
+      <button onClick={openAddProspect} aria-label="Add prospect"
+        className="sm:hidden fixed bottom-5 right-5 z-30 w-14 h-14 rounded-full bg-crimson text-white shadow-lift flex items-center justify-center active:scale-95 transition-transform">
+        <Icon name="plus" className="w-6 h-6" strokeWidth={2.5} />
+      </button>
     </Layout>
   );
 }
@@ -1309,6 +1548,42 @@ function FormField({ label, children }) {
     <div>
       <label className="label">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function StageChip({ label, count, active, onClick, tone, muted }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={active}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+        active ? 'bg-ink text-white' : `bg-white border border-gray-200 hover:border-gray-300 ${muted ? 'text-gray-400' : 'text-ink-soft'}`
+      }`}>
+      {label}
+      <span className={`min-w-[18px] px-1 rounded text-[11px] font-bold tabular-nums text-center ${
+        active ? 'bg-white/20 text-white' : tone === 'win' && count > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-ink-muted'
+      }`}>{count}</span>
+    </button>
+  );
+}
+
+function HeroStat({ label, value, sub, icon, emoji, good }) {
+  return (
+    <div className={`rounded-xl px-3 py-3 border ${good ? 'bg-emerald-400/10 border-emerald-300/25' : 'bg-white/[0.06] border-white/10'}`}>
+      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/50">
+        {emoji ? <span className="text-xs">{emoji}</span> : <Icon name={icon} className={`w-3 h-3 ${good ? 'text-emerald-300' : ''}`} />}
+        {label}
+      </p>
+      <p className="num text-white text-lg sm:text-xl font-semibold mt-1 leading-tight truncate">{value}</p>
+      <p className="text-[11px] text-white/45 mt-0.5 leading-snug">{sub}</p>
+    </div>
+  );
+}
+
+function Money({ label, value, strong, loading }) {
+  return (
+    <div className={`rounded-lg px-2.5 py-2.5 ${strong ? 'bg-crimson-50 ring-1 ring-inset ring-crimson-100' : 'bg-paper/80'}`}>
+      <p className={`text-[10px] font-semibold uppercase tracking-[0.06em] ${strong ? 'text-crimson' : 'text-ink-muted'}`}>{label}</p>
+      <p className={`num text-xl font-semibold mt-0.5 ${strong ? 'text-crimson' : 'text-ink'}`}>{loading ? '—' : fmtUsd(value)}</p>
     </div>
   );
 }

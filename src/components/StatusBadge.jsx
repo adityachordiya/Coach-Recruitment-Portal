@@ -20,11 +20,12 @@ const dots = {
   'Not Interested': 'bg-gray-300',
 };
 
-export default function StatusBadge({ status }) {
+// `short` trims the longest stage name for tight rows; the title keeps it whole.
+export default function StatusBadge({ status, short = false }) {
   return (
-    <span className={`badge ${styles[status] || 'bg-gray-50 text-gray-600 ring-gray-200'}`}>
+    <span title={status} className={`badge ${styles[status] || 'bg-gray-50 text-gray-600 ring-gray-200'}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${dots[status] || 'bg-gray-400'}`} />
-      {status}
+      {short && status === 'Connected with Ascend Admin' ? 'Connected' : status}
     </span>
   );
 }

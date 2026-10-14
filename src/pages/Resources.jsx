@@ -29,7 +29,7 @@ export default function Resources() {
       <div className="mb-6">
         <p className="eyebrow text-crimson">Playbook</p>
         <h1 className="font-display text-3xl font-semibold text-ink tracking-tight mt-1">Recruiting playbook</h1>
-        <p className="text-ink-muted text-sm mt-1">Ascend California 2026 · Everything you need to recruit successfully.</p>
+        <p className="text-ink-muted text-sm mt-1">Ascend California 2027 · Everything you need to recruit successfully.</p>
       </div>
 
       {/* Referral Code Banner */}
@@ -88,16 +88,16 @@ export default function Resources() {
             <p className="text-gray-600 leading-relaxed mt-3">
               Beyond camp, Ascend offers two school-year coaching programs: <strong>Ascend Academy</strong> (free year-round
               group coaching) and <strong>Sandel Academy</strong> (private one-on-one coaching with the best coaches in the
-              country). Both run August through June, so student growth continues long after camp ends.
+              country). Ascend Academy runs September through June, so student growth continues long after camp ends.
             </p>
 
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 { icon: '📍', label: 'Location', value: 'University of the Pacific, Stockton, CA' },
-                { icon: '📅', label: 'Dates', value: 'July 12–26, 2026' },
+                { icon: '📅', label: 'Dates', value: 'July 11–25, 2027 (1-week options July 11–18)' },
                 { icon: '✈️', label: 'Nearest Airport', value: 'Sacramento International (SMF) — campus transport available' },
-                { icon: '🎓', label: 'Target Grade', value: '6th–12th grade in the current \'25–\'26 school year' },
-                { icon: '📚', label: 'Post-Camp', value: 'Free Ascend Academy + Sandel Academy coaching Aug–June every year' },
+                { icon: '🎓', label: 'Target Grade', value: 'Entering 6th–12th grade in fall 2027' },
+                { icon: '📚', label: 'Post-Camp', value: 'Free Ascend Academy group coaching September–June, plus Sandel Academy private coaching' },
                 { icon: '💰', label: 'Financial Aid', value: 'Available for students with demonstrated need — no one turned away' },
               ].map((item) => (
                 <div key={item.label} className="bg-white border border-black/[0.07] rounded-xl p-4">
@@ -121,7 +121,7 @@ export default function Resources() {
                 { icon: '🏆', title: 'Unmatched Track Record', desc: 'The largest Congress camp in the country with the most success on the national circuit — no other camp matches our results.' },
                 { icon: '🧑‍🏫', title: 'Top-Tier Coaches', desc: 'Champions and coaches of champions from across the country — diverse perspectives for every level of student.' },
                 { icon: '🎬', title: 'Daily Mock Rounds', desc: 'At least one (sometimes two) mock rounds daily in a tournament-like setting, with feedback tied directly to what\'s being taught.' },
-                { icon: '📚', title: 'Year-Round Learning', desc: 'Ascend Academy and Sandel Academy coaching run August through June every year — so growth never stops.' },
+                { icon: '📚', title: 'Year-Round Learning', desc: 'Free Ascend Academy group coaching runs September through June, and Sandel Academy offers private coaching during the school year — so growth never stops.' },
                 { icon: '🤝', title: 'Individualized Coaching', desc: 'Students get dedicated one-on-one coaching during camp — and Ascend is increasing it more this year than any previous year.' },
                 { icon: '🗺️', title: 'Regional Specialization', desc: 'Coaches from across the country ensure success on both the national circuit and in local leagues, wherever a student competes.' },
                 { icon: '🛡️', title: 'Dedicated Safety Team', desc: 'A dedicated administrative team focused entirely on student safety — they don\'t coach, their only job is student care.' },
@@ -237,7 +237,7 @@ export default function Resources() {
                 'Ascend is the largest Congress camp in the country, with the strongest track record on the national circuit and the most success at the TOC.',
                 'Every student gets a tailored curriculum built around their specific needs — Ascend meets students where they are and builds a plan to take them further.',
                 'Students get dedicated one-on-one coaching during camp — and Ascend will be increasing it more this year than any other previous year.',
-                'Growth doesn\'t stop at camp. Ascend Academy and Sandel Academy coaching runs August through June every year, keeping students improving all season.',
+                'Growth doesn\'t stop at camp. Free Ascend Academy group coaching runs September through June, keeping students improving all season.',
                 'Ascend has the best coaching staff in the country and there isn\'t a close second.',
                 `Share your referral code (${code}) — students get $50 off and you get full credit for the referral.`,
                 'Financial aid is available for students with genuine need — no deserving student has ever been turned away.',
@@ -252,7 +252,7 @@ export default function Resources() {
 
           {/* Pricing */}
           <Section id="pricing" title="Program Options & Pricing">
-            <p className="text-gray-600 mb-5">Registration is open for Summer 2026. Prices increase over time — encourage students to register early.</p>
+            <p className="text-gray-600 mb-5">Registration is open for Summer 2027. These are early registration prices; the bigger packages go up to full price later, so encourage students to register early.</p>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -264,26 +264,29 @@ export default function Resources() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {[
-                    { name: '2 Week – Residential (Most Popular)', price: '$3,599.99', dates: 'July 12–26, 2026', highlight: true },
-                    { name: '2 Week – Residential with 1-on-1 Package (Limited to first 10 students)', price: '$4,599.99', dates: 'July 12–26, 2026' },
-                    { name: '2 Week – Residential for Summer \'26 & \'27 (~$3,250 per summer)', price: '$6,499.99', dates: 'July 12–26 + July 11–25, 2027' },
-                    { name: '1 Week – Residential', price: '$2,599.99', dates: 'July 12–19, 2026' },
-                    { name: '2 Week – Commuter', price: '$2,599.99', dates: 'July 12–26, 2026' },
-                    { name: '1 Week – Commuter', price: '$1,999.99', dates: 'July 12–19, 2026' },
+                    { name: '2 Week – Residential', price: '$3,249.99', full: '$3,749.99', dates: 'July 11–25, 2027', highlight: true },
+                    { name: '2 Week – Residential with 1-on-1 Package (Limited to 10 students)', price: '$4,249.99', full: '$4,749.99', dates: 'July 11–25, 2027' },
+                    { name: '2 Week – Residential for Summer \'27 & \'28 (~$3,000 per summer)', price: '$5,999.99', full: '$7,499.99', dates: 'July 11–25, 2027 + Summer 2028' },
+                    { name: '1 Week – Residential', price: '$2,599.99', dates: 'July 11–18, 2027' },
+                    { name: '2 Week – Commuter', price: '$2,599.99', dates: 'July 11–25, 2027' },
+                    { name: '1 Week – Commuter', price: '$1,999.99', dates: 'July 11–18, 2027' },
                   ].map((row) => (
                     <tr key={row.name} className={row.highlight ? 'bg-crimson-50' : 'bg-white'}>
                       <td className="px-4 py-3 text-gray-800 font-medium">
                         {row.name}
                         {row.highlight && <span className="ml-2 text-xs bg-crimson text-white px-2 py-0.5 rounded-full">Most Popular</span>}
                       </td>
-                      <td className="px-4 py-3 font-bold text-crimson">{row.price}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="font-bold text-crimson">{row.price}</span>
+                        {row.full && <span className="block text-xs text-gray-400"><span className="line-through">{row.full}</span> full price</span>}
+                      </td>
                       <td className="px-4 py-3 text-gray-500">{row.dates}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-gray-400 mt-3">Financial aid is available for students with demonstrated need. Encourage eligible students to reach out to Ascend directly.</p>
+            <p className="text-xs text-gray-400 mt-3">Prices from the Ascend store, ascendspeech.org/ascend-store. Financial aid is available for students with demonstrated need: families can email info@ascendspeech.org.</p>
           </Section>
 
           {/* Financial Aid */}

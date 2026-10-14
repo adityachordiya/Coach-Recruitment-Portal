@@ -17,7 +17,7 @@ const EMPTY_FORM = {
   parent_name: '', parent_email: '', parent_phone: '',
 };
 
-const CAMP_DATE = new Date('2026-07-12T09:00:00');
+const CAMP_DATE = new Date('2027-07-11T09:00:00');
 
 const BADGES = [
   // Outreach volume
@@ -203,12 +203,12 @@ function buildGmailUrl(prospect, user) {
 
   const greeting = [latest.contact_name, latest.parent_name].filter(Boolean).join(' and ');
 
-  const subject = encodeURIComponent('Following up — Ascend Speech & Debate 2026');
+  const subject = encodeURIComponent('Following up — Ascend Speech & Debate 2027');
 
   const body = encodeURIComponent(
     `Hi ${greeting},\n\n` +
     `My name is ${user.first_name} ${user.last_name}, and I'm a coach at Ascend Speech & Debate. ` +
-    `I wanted to personally follow up about our summer camp at the University of the Pacific, July 12–26, 2026.\n\n` +
+    `I wanted to personally follow up about our summer camp at the University of the Pacific, July 11–25, 2027.\n\n` +
     `Ascend is the #1 Congressional Debate camp in the country — every TOC winner this decade has been part of our program. ` +
     `I genuinely think you'd thrive here.\n\n` +
     `You can use my referral code ${user.referral_code} at checkout to save $50:\n` +
@@ -824,7 +824,7 @@ export default function Dashboard() {
         </div>
         {countdown && (
           <div className="relative border-t border-white/10 px-5 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-            <span className="text-white/60 inline-flex items-center gap-2"><Icon name="calendar" className="w-4 h-4" />Ascend California 2026 · July 12–26 · University of the Pacific</span>
+            <span className="text-white/60 inline-flex items-center gap-2"><Icon name="calendar" className="w-4 h-4" />Ascend California 2027 · July 11–25 · University of the Pacific</span>
             <span className="num text-white font-semibold">{countdown.days} days to go</span>
           </div>
         )}

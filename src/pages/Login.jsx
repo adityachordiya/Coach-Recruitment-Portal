@@ -83,7 +83,7 @@ export default function Login() {
         {/* Footer */}
         <div className="relative">
           <p className="text-white/40 text-xs">
-            © 2026 Ascend Speech & Debate · University of the Pacific, Stockton CA · July 12–26
+            © 2026 Ascend Speech & Debate · University of the Pacific, Stockton CA · July 11–25, 2027
           </p>
         </div>
       </div>

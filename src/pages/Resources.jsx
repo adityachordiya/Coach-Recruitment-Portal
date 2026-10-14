@@ -27,18 +27,22 @@ export default function Resources() {
   return (
     <Layout>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Recruiting Playbook</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Ascend California 2026 · Everything you need to recruit successfully.</p>
+        <p className="eyebrow text-crimson">Playbook</p>
+        <h1 className="font-display text-3xl font-semibold text-ink tracking-tight mt-1">Recruiting playbook</h1>
+        <p className="text-ink-muted text-sm mt-1">Ascend California 2026 · Everything you need to recruit successfully.</p>
       </div>
 
       {/* Referral Code Banner */}
-      <div className="bg-crimson rounded-2xl p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="relative overflow-hidden bg-ink rounded-2xl p-6 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 shadow-lift">
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(90% 120% at 100% 0%, rgba(189,31,46,0.55) 0%, rgba(189,31,46,0) 60%)' }} />
         <div>
-          <p className="text-crimson-100 text-xs font-semibold uppercase tracking-wide mb-1">Your Referral Code</p>
-          <p className="text-white text-3xl font-bold font-mono tracking-widest">{code}</p>
-          <p className="text-crimson-100 text-sm mt-1">Share this with every student you recruit — they get $50 off, you get full credit.</p>
+          <div className="relative">
+          <p className="text-white/50 text-[11px] font-semibold uppercase tracking-[0.1em] mb-1">Your referral code</p>
+          <p className="text-white text-3xl font-bold font-mono tracking-[0.14em]">{code}</p>
+          <p className="text-white/65 text-sm mt-1">Share this with every student you recruit. They get $50 off, you get full credit.</p>
+          </div>
         </div>
-        <div className="flex flex-col gap-1.5 text-sm text-white/80 shrink-0">
+        <div className="relative flex flex-col gap-1.5 text-sm text-white/80 shrink-0">
           <span>✓ Students save $50 at registration</span>
           <span>✓ You get credit even if leadership closes</span>
           <span>✓ No code = no credit — always share it</span>
@@ -55,8 +59,8 @@ export default function Resources() {
                 onClick={() => scrollTo(s.id)}
                 className={`text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                   active === s.id
-                    ? 'bg-crimson-50 text-crimson font-medium'
-                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'
+                    ? 'bg-white text-ink font-semibold shadow-card border-l-2 border-crimson rounded-l-none'
+                    : 'text-ink-muted hover:text-ink hover:bg-white/70'
                 }`}
               >
                 {s.label}
@@ -96,7 +100,7 @@ export default function Resources() {
                 { icon: '📚', label: 'Post-Camp', value: 'Free Ascend Academy + Sandel Academy coaching Aug–June every year' },
                 { icon: '💰', label: 'Financial Aid', value: 'Available for students with demonstrated need — no one turned away' },
               ].map((item) => (
-                <div key={item.label} className="bg-gray-50 rounded-xl p-4">
+                <div key={item.label} className="bg-white border border-black/[0.07] rounded-xl p-4">
                   <div className="flex items-start gap-2">
                     <span className="text-lg">{item.icon}</span>
                     <div>
@@ -124,7 +128,7 @@ export default function Resources() {
                 { icon: '📋', title: 'Tailored Curriculum', desc: 'Curriculum is tailored to each student based on their lab placement, so every student works on what matters most for their development.' },
                 { icon: '🌎', title: 'National Community', desc: 'Ascend is the largest Congressional Debate community in the country, with students competing together all year long.' },
               ].map((item) => (
-                <div key={item.title} className="bg-white border border-gray-200 rounded-xl p-4">
+                <div key={item.title} className="card p-4">
                   <div className="flex items-start gap-3">
                     <span className="text-2xl">{item.icon}</span>
                     <div>
@@ -146,8 +150,8 @@ export default function Resources() {
                 number="1"
                 title="Your School Team"
                 subtitle="Warmest leads — highest conversion rate"
-                color="bg-green-50 border-green-200"
-                numberColor="bg-green-600"
+                color="bg-white border-black/[0.07] shadow-card"
+                numberColor="bg-crimson"
                 why={[
                   'Younger and newer teammates see you as a mentor — your recommendation carries more weight than any advertisement.',
                   'Peers respect your judgment and experience on the circuit — a genuine nudge from you lands differently than a flyer.',
@@ -166,8 +170,8 @@ export default function Resources() {
                 number="2"
                 title="National Circuit Network"
                 subtitle="Warm leads — reach debaters you already know"
-                color="bg-blue-50 border-blue-200"
-                numberColor="bg-blue-600"
+                color="bg-white border-black/[0.07] shadow-card"
+                numberColor="bg-navy"
                 why={[
                   'Students trust recommendations from other debaters more than any advertisement or sales pitch.',
                   'You\'ve competed against these people — they know you\'re the real deal.',
@@ -186,8 +190,8 @@ export default function Resources() {
                 number="3"
                 title="Community Events & Workshops"
                 subtitle="Cold leads — build pipeline and trust"
-                color="bg-gold-50 border-yellow-200"
-                numberColor="bg-gold"
+                color="bg-white border-black/[0.07] shadow-card"
+                numberColor="bg-ink"
                 why={[
                   'Introduces students to what\'s possible before they have any reason to say no.',
                   'Builds trust before you ever mention camp — serve first, recruit second.',
@@ -288,9 +292,9 @@ export default function Resources() {
               Ascend is committed to making sure that financial need is never the reason a deserving student misses out on camp.
               Over the years, Ascend has provided over <strong>$125,000 in financial aid</strong> — and no student with genuine need has ever been turned away.
             </p>
-            <div className="mt-5 bg-gold-50 border border-yellow-200 rounded-xl p-4">
-              <p className="text-sm font-semibold text-yellow-800 mb-1">What to say when cost comes up:</p>
-              <p className="text-sm text-yellow-900 italic leading-relaxed">
+            <div className="mt-5 bg-navy-50 border border-navy-100 rounded-xl p-4">
+              <p className="text-sm font-semibold text-navy mb-1">What to say when cost comes up:</p>
+              <p className="text-sm text-ink-soft italic leading-relaxed">
                 "If cost is genuinely a concern for your family, please reach out — Ascend has financial aid available and no student with real need has ever been turned away."
               </p>
             </div>
@@ -362,7 +366,7 @@ export default function Resources() {
           </Section>
 
           {/* Contact */}
-          <div className="bg-gray-900 rounded-2xl p-6 text-white">
+          <div className="bg-ink rounded-2xl p-6 text-white shadow-lift">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Questions? Contact Ascend Leadership</p>
             <p className="font-semibold text-lg">Aditya Chordiya</p>
             <p className="text-gray-400 text-sm">Chief Operating Officer, Ascend Speech & Debate</p>
@@ -393,7 +397,7 @@ export default function Resources() {
 function Section({ id, title, children }) {
   return (
     <section id={id} className="scroll-mt-24">
-      <h2 className="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">{title}</h2>
+      <h2 className="font-display text-[22px] font-semibold text-ink tracking-tight mb-4 pb-3 border-b border-black/[0.08]">{title}</h2>
       {children}
     </section>
   );

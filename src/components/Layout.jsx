@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
+import Icon from './Icon';
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
@@ -28,7 +29,7 @@ export default function Layout({ children }) {
     setFlying(true);
 
     // Massive confetti party
-    const colors = ['#A51C30', '#D4A017', '#fff', '#FAE4E8', '#FAF1CC'];
+    const colors = ['#BD1F2E', '#15171B', '#fff', '#FBE4E6', '#B8892B'];
     confetti({ particleCount: 150, spread: 120, origin: { y: 0.3 }, colors });
     setTimeout(() => confetti({ particleCount: 100, angle: 60,  spread: 80, origin: { x: 0,   y: 0.5 }, colors }), 200);
     setTimeout(() => confetti({ particleCount: 100, angle: 120, spread: 80, origin: { x: 1,   y: 0.5 }, colors }), 400);
@@ -63,7 +64,7 @@ export default function Layout({ children }) {
   useEffect(() => () => clearInterval(intervalRef.current), []);
 
   return (
-    <div className="min-h-screen bg-[#F4F5F7]">
+    <div className="min-h-screen bg-paper">
 
       {/* Flying mascot overlay */}
       {flying && (
@@ -81,82 +82,93 @@ export default function Layout({ children }) {
             transition: 'left 0.38s cubic-bezier(.68,-0.55,.27,1.55), top 0.38s cubic-bezier(.68,-0.55,.27,1.55)',
             transform: `rotate(${rotation}deg) scaleX(${flipped ? -1 : 1})`,
             pointerEvents: 'none',
-            filter: 'drop-shadow(0 8px 24px rgba(165,28,48,0.4))',
+            filter: 'drop-shadow(0 8px 24px rgba(189,31,46,0.4))',
           }}
         />
       )}
 
-      <nav className="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-15" style={{ height: '3.75rem' }}>
+      <nav className="bg-white/95 backdrop-blur border-b border-black/[0.07] sticky top-0 z-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
 
-          {/* Logo */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            <button
-              onClick={launchMascot}
-              className="focus:outline-none"
-              title="Click me!"
-            >
+          {/* Wordmark */}
+          <div className="flex items-center gap-3 shrink-0">
+            <button onClick={launchMascot} className="rounded-full" title="Click me!" aria-label="Ascend mascot">
               <img
                 src="/mascot.png"
-                alt="Ascend"
-                className={`w-9 h-9 object-contain transition-transform ${flying ? 'opacity-0' : 'animate-wiggle hover:scale-125'}`}
+                alt=""
+                className={`w-9 h-9 object-contain ${flying ? 'opacity-0' : 'hover:scale-110'}`}
                 style={{ transition: 'transform 0.15s, opacity 0.2s' }}
               />
             </button>
-            <Link to="/dashboard" className="hidden sm:block">
-              <span className="font-bold text-gray-900 text-sm leading-none">Ascend</span>
-              <span className="text-gray-400 text-sm font-normal"> Coach Portal</span>
+            <Link to="/dashboard" className="flex items-baseline gap-2">
+              <span className="font-display text-[21px] font-semibold text-ink leading-none tracking-tight">Ascend</span>
+              <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-[0.12em] text-crimson">Coach Portal</span>
             </Link>
           </div>
 
-          {/* Nav links */}
-          <div className="hidden sm:flex items-center gap-1">
+          {/* Tabs */}
+          <div className="hidden sm:flex items-stretch gap-1 h-full">
             <NavLink to="/dashboard" active={location.pathname === '/dashboard'}>Dashboard</NavLink>
-            <NavLink to="/resources" active={location.pathname === '/resources'}>Resources</NavLink>
+            <NavLink to="/resources" active={location.pathname === '/resources'}>Playbook</NavLink>
             {user?.role === 'owner' && (
               <NavLink to="/admin" active={location.pathname === '/admin'}>Admin</NavLink>
             )}
           </div>
 
-          {/* Right side */}
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-crimson-100 flex items-center justify-center">
-                <span className="text-crimson text-xs font-bold">{initials}</span>
+          {/* Account */}
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2.5 pr-2">
+              <div className="w-8 h-8 rounded-full bg-ink flex items-center justify-center">
+                <span className="text-white text-[11px] font-bold tracking-wide">{initials}</span>
               </div>
-              <span className="text-sm font-medium text-gray-700">{user?.first_name}</span>
+              <div className="leading-tight">
+                <p className="text-sm font-semibold text-ink">{user?.first_name} {user?.last_name}</p>
+                <p className="text-[11px] text-ink-muted font-mono">{user?.referral_code}</p>
+              </div>
             </div>
-            <div className="w-px h-5 bg-gray-200 hidden sm:block" />
             <button
               onClick={handleLogout}
-              className="text-sm text-gray-400 hover:text-crimson transition-colors px-2 py-1 rounded-lg hover:bg-crimson-50"
+              className="hidden sm:inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-crimson transition-colors px-2.5 py-1.5 rounded-lg hover:bg-crimson-50"
+              title="Sign out"
             >
-              Sign out
+              <Icon name="logout" className="w-4 h-4" />
+              <span className="hidden md:inline">Sign out</span>
             </button>
             <button
               onClick={() => setMenuOpen(v => !v)}
-              className="sm:hidden p-1.5 rounded-lg hover:bg-gray-100 transition"
+              className="sm:hidden p-2 rounded-lg hover:bg-gray-100 transition"
+              aria-label="Menu"
             >
-              <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d={menuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} />
-              </svg>
+              <Icon name={menuOpen ? 'x' : 'menu'} className="w-5 h-5 text-ink-soft" />
             </button>
           </div>
         </div>
 
         {/* Mobile menu */}
         {menuOpen && (
-          <div className="sm:hidden border-t border-gray-100 bg-white px-4 py-3 space-y-1">
+          <div className="sm:hidden border-t border-black/[0.07] bg-white px-4 py-3 space-y-1">
+            <div className="flex items-center gap-2.5 px-3 pb-3 mb-1 border-b border-gray-100">
+              <div className="w-8 h-8 rounded-full bg-ink flex items-center justify-center">
+                <span className="text-white text-[11px] font-bold">{initials}</span>
+              </div>
+              <div className="leading-tight">
+                <p className="text-sm font-semibold text-ink">{user?.first_name} {user?.last_name}</p>
+                <p className="text-[11px] text-ink-muted font-mono">{user?.referral_code}</p>
+              </div>
+            </div>
             <MobileNavLink to="/dashboard" active={location.pathname === '/dashboard'} onClick={() => setMenuOpen(false)}>Dashboard</MobileNavLink>
-            <MobileNavLink to="/resources" active={location.pathname === '/resources'} onClick={() => setMenuOpen(false)}>Resources</MobileNavLink>
+            <MobileNavLink to="/resources" active={location.pathname === '/resources'} onClick={() => setMenuOpen(false)}>Playbook</MobileNavLink>
             {user?.role === 'owner' && (
               <MobileNavLink to="/admin" active={location.pathname === '/admin'} onClick={() => setMenuOpen(false)}>Admin</MobileNavLink>
             )}
+            <button onClick={handleLogout} className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-ink-muted hover:bg-gray-50">
+              Sign out
+            </button>
           </div>
         )}
       </nav>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {children}
       </main>
     </div>
@@ -167,10 +179,10 @@ function NavLink({ to, active, children }) {
   return (
     <Link
       to={to}
-      className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+      className={`relative flex items-center px-3.5 text-sm font-medium transition-colors duration-150 ${
         active
-          ? 'bg-crimson text-white shadow-sm'
-          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          ? 'text-ink after:absolute after:left-3 after:right-3 after:bottom-0 after:h-[2px] after:rounded-full after:bg-crimson'
+          : 'text-ink-muted hover:text-ink'
       }`}
     >
       {children}
@@ -184,7 +196,7 @@ function MobileNavLink({ to, active, children, onClick }) {
       to={to}
       onClick={onClick}
       className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-        active ? 'bg-crimson-50 text-crimson' : 'text-gray-700 hover:bg-gray-50'
+        active ? 'bg-crimson-50 text-crimson' : 'text-ink-soft hover:bg-gray-50'
       }`}
     >
       {children}

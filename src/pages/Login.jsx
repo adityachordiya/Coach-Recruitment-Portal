@@ -32,7 +32,7 @@ export default function Login() {
       {/* Left panel — brand */}
       <div
         className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
-        style={{ background: `linear-gradient(160deg, rgba(140,20,38,0.88) 0%, rgba(50,5,12,0.93) 100%), url('/photo-students-smiling.jpg') center 40%/cover no-repeat` }}
+        style={{ background: `radial-gradient(120% 90% at 100% 0%, rgba(189,31,46,0.55) 0%, rgba(189,31,46,0) 60%), linear-gradient(180deg, rgba(21,23,27,0.82) 0%, rgba(21,23,27,0.94) 100%), url('/photo-students-smiling.jpg') center 40%/cover no-repeat` }}
       >
         {/* Subtle vignette overlay */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -43,12 +43,10 @@ export default function Login() {
         {/* Logo */}
         <div className="relative">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">A</span>
-            </div>
+            <img src="/mascot.png" alt="" className="w-10 h-10 object-contain" />
             <div>
-              <p className="text-white font-bold text-lg leading-none">Ascend</p>
-              <p className="text-white/60 text-xs mt-0.5">Coach Portal</p>
+              <p className="font-display text-white font-semibold text-xl leading-none">Ascend</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-crimson-200 mt-1">Coach Portal</p>
             </div>
           </div>
         </div>
@@ -56,10 +54,7 @@ export default function Login() {
         {/* Center content */}
         <div className="relative space-y-8">
           <div>
-            <div className="mb-6 flex justify-center">
-              <img src="/mascot.png" alt="Ascend mascot" className="w-36 h-36 object-contain animate-float drop-shadow-2xl" />
-            </div>
-            <h1 className="text-4xl font-bold text-white leading-tight text-balance">
+            <h1 className="font-display text-[44px] font-semibold text-white leading-[1.08] tracking-tight text-balance">
               The #1 Congress camp in the country
             </h1>
             <p className="text-white/70 mt-4 text-lg leading-relaxed">
@@ -74,7 +69,7 @@ export default function Login() {
               'Access scripts, pricing, and talking points',
             ].map((item) => (
               <div key={item} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                <div className="w-5 h-5 rounded-full bg-crimson flex items-center justify-center shrink-0">
                   <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
@@ -94,27 +89,25 @@ export default function Login() {
       </div>
 
       {/* Right panel — form */}
-      <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 bg-[#F4F5F7]">
+      <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 bg-paper">
         {/* Mobile logo */}
         <div className="lg:hidden flex items-center gap-2 mb-8">
-          <div className="w-9 h-9 rounded-xl bg-crimson flex items-center justify-center shadow-sm">
-            <span className="text-white font-bold">A</span>
-          </div>
+          <img src="/mascot.png" alt="" className="w-9 h-9 object-contain" />
           <div>
-            <p className="font-bold text-gray-900 text-sm">Ascend Coach Portal</p>
+            <p className="font-display font-semibold text-ink text-lg">Ascend <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-crimson align-middle">Coach Portal</span></p>
           </div>
         </div>
 
         <div className="w-full max-w-sm">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
+            <h2 className="font-display text-[28px] font-semibold text-ink tracking-tight">Welcome back</h2>
             <p className="text-gray-500 text-sm mt-1">Sign in to your coach account</p>
           </div>
 
-          <div className="card p-8 shadow-md">
+          <div className="card p-7 sm:p-8 shadow-lift">
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
-                <div className="bg-red-50 border border-red-100 text-red-700 text-sm px-4 py-3 rounded-xl flex items-start gap-2">
+                <div className="bg-crimson-50 border border-crimson-100 text-crimson-dark text-sm px-4 py-3 rounded-lg flex items-start gap-2">
                   <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
+import Icon from '../components/Icon';
 import StatusBadge from '../components/StatusBadge';
 import { api } from '../lib/api';
 
@@ -71,16 +72,16 @@ export default function Admin() {
       {/* Header */}
       <div className="mb-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Manage coaches and track recruiting activity.</p>
+          <p className="eyebrow text-crimson">Owners only</p>
+          <h1 className="font-display text-3xl font-semibold text-ink tracking-tight mt-1">Coach recruiting</h1>
+          <p className="text-ink-muted text-sm mt-1">Invite coaches and see how their outreach is turning into enrollments.</p>
         </div>
         <button
           onClick={() => { setShowInvite((v) => !v); setInviteMsg(''); setInviteErr(''); }}
-          className={`self-start sm:self-auto text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-sm ${
-            showInvite ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-crimson text-white hover:bg-crimson-dark'
-          }`}
+          className={`self-start sm:self-auto text-sm px-4 py-2.5 ${showInvite ? 'btn-outline' : 'btn-primary'}`}
         >
-          {showInvite ? '✕ Cancel' : '+ Invite Coach'}
+          <Icon name={showInvite ? 'x' : 'plus'} className="w-4 h-4" />
+          {showInvite ? 'Cancel' : 'Invite coach'}
         </button>
       </div>
 
@@ -99,11 +100,11 @@ export default function Admin() {
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)}
-                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
                 Cancel
               </button>
               <button onClick={handleDelete} disabled={deleting}
-                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition disabled:opacity-60">
+                className="flex-1 px-4 py-2.5 bg-crimson text-white rounded-lg text-sm font-semibold hover:bg-crimson-dark transition disabled:opacity-60">
                 {deleting ? 'Removing…' : 'Remove'}
               </button>
             </div>
@@ -148,17 +149,17 @@ export default function Admin() {
 
       {/* Summary Stats */}
       {!loading && coaches.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <StatCard label="Coaches" value={coaches.length} icon="👥" />
-          <StatCard label="Total Outreach" value={totalOutreach} icon="📤" color="text-crimson" />
-          <StatCard label="Total Conversions" value={totalReferrals} icon="🏆" color="text-gold" />
+        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+          <StatCard label="Coaches" value={coaches.length} icon="users" />
+          <StatCard label="Outreach logged" value={totalOutreach} icon="send" />
+          <StatCard label="Enrollments" value={totalReferrals} icon="trophy" accent />
         </div>
       )}
 
       {/* Coaches Table */}
       <div className="card shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">All Coaches</h2>
+          <h2 className="font-display text-lg font-semibold text-ink">All coaches</h2>
         </div>
 
         {loading ? (
@@ -168,7 +169,7 @@ export default function Admin() {
           </div>
         ) : coaches.length === 0 ? (
           <div className="text-center py-16 px-6">
-            <div className="text-4xl mb-3">👥</div>
+            <div className="w-12 h-12 rounded-full bg-navy-50 text-navy flex items-center justify-center mx-auto mb-3"><Icon name="users" className="w-5 h-5" /></div>
             <p className="font-medium text-gray-700">No coaches yet</p>
             <p className="text-sm text-gray-400 mt-1">Invite a coach to get started.</p>
           </div>
@@ -190,14 +191,15 @@ export default function Admin() {
   );
 }
 
-function StatCard({ label, value, icon, color = 'text-gray-900' }) {
+function StatCard({ label, value, icon, accent = false }) {
   return (
-    <div className="card p-5 shadow-sm">
-      <div className="flex items-center gap-3 mb-2">
-        <span className="text-xl">{icon}</span>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
+    <div className="card p-4 sm:p-5 relative overflow-hidden min-w-0">
+      <div className={`absolute inset-x-0 top-0 h-[3px] ${accent ? 'bg-crimson' : 'bg-navy'}`} />
+      <div className="flex items-center justify-between gap-2">
+        <p className="eyebrow truncate">{label}</p>
+        <Icon name={icon} className="w-4 h-4 text-ink-muted shrink-0 hidden sm:block" />
       </div>
-      <p className={`text-3xl font-bold ${color}`}>{value}</p>
+      <p className={`num text-3xl sm:text-[34px] font-semibold mt-2 ${accent ? 'text-crimson' : 'text-ink'}`}>{value}</p>
     </div>
   );
 }
@@ -216,8 +218,8 @@ function CoachRow({ coach, expanded, onToggle, onDelete }) {
     <div>
       <div className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
         {/* Avatar */}
-        <div className="w-9 h-9 rounded-xl bg-crimson-50 flex items-center justify-center shrink-0">
-          <span className="text-crimson text-xs font-bold">{initials}</span>
+        <div className="w-9 h-9 rounded-full bg-navy-50 flex items-center justify-center shrink-0">
+          <span className="text-navy text-xs font-bold">{initials}</span>
         </div>
 
         {/* Name & info — clickable to expand */}
@@ -225,16 +227,16 @@ function CoachRow({ coach, expanded, onToggle, onDelete }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-gray-900">{coach.first_name} {coach.last_name}</span>
             {coach.role === 'owner' && (
-              <span className="badge bg-crimson-50 text-crimson ring-1 ring-crimson-100">Owner</span>
+              <span className="badge bg-ink text-white ring-ink">Owner</span>
             )}
-            <span className="text-xs font-mono text-crimson bg-crimson-50 px-2 py-0.5 rounded-md">{coach.referral_code}</span>
+            <span className="text-[11px] font-mono font-semibold text-ink-soft bg-gray-100 px-2 py-0.5 rounded-md">{coach.referral_code}</span>
           </div>
         </button>
 
         {/* Stats */}
         <div className="hidden sm:flex items-center gap-6 text-sm shrink-0">
-          <Stat label="Referrals"     value={coach.referral_count} color={coach.referral_count > 0 ? 'text-gold font-bold' : ''} />
-          <Stat label="Outreach"      value={coach.outreach_count} color={coach.outreach_count > 0 ? 'text-crimson font-bold' : ''} />
+          <Stat label="Enrolled"      value={coach.referral_count} color={coach.referral_count > 0 ? 'text-crimson font-semibold' : 'text-ink-muted'} />
+          <Stat label="Outreach"      value={coach.outreach_count} color={coach.outreach_count > 0 ? 'font-semibold' : 'text-ink-muted'} />
           <Stat label="Last Login"    value={lastLogin}   mono={false} />
           <Stat label="Last Outreach" value={lastActive}  mono={false} />
         </div>
@@ -261,13 +263,13 @@ function CoachRow({ coach, expanded, onToggle, onDelete }) {
 
       {/* Mobile stats */}
       <div className={`sm:hidden px-6 pb-3 flex gap-4 text-sm -mt-2 ${expanded ? 'hidden' : ''}`}>
-        <Stat label="Referrals" value={coach.referral_count} />
+        <Stat label="Enrolled" value={coach.referral_count} />
         <Stat label="Outreach" value={coach.outreach_count} />
       </div>
 
       {/* Expanded outreach log */}
       {expanded && (
-        <div className="px-6 pb-6 bg-gray-50/60 border-t border-gray-100">
+        <div className="px-6 pb-6 bg-paper/70 border-t border-gray-100">
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-4 mb-3">Outreach Log</h3>
           {coach.outreach_log.length === 0 ? (
             <p className="text-sm text-gray-400 py-2">No outreach entries yet.</p>

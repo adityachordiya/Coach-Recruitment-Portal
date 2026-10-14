@@ -4,6 +4,7 @@ import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
+import Icon from '../components/Icon';
 
 const CONTACT_METHODS = ['Instagram DM', 'Text', 'Phone Call', 'Email', 'In Person'];
 const STATUSES        = ['Reached Out', 'No Response', 'Interested', 'Connected with Ascend Admin', 'Enrolled', 'Not Interested'];
@@ -20,21 +21,21 @@ const CAMP_DATE = new Date('2026-07-12T09:00:00');
 
 const BADGES = [
   // Outreach volume
-  { id: 'first_contact',    emoji: '🌱', label: 'First Contact',    desc: 'Log your first prospect',       color: 'from-green-50 to-emerald-50   border-green-200',  check: ({ p }) => p >= 1  },
-  { id: 'on_the_board',     emoji: '📣', label: 'On the Board',     desc: 'Reach 5 prospects',             color: 'from-blue-50 to-sky-50         border-blue-200',   check: ({ p }) => p >= 5  },
-  { id: 'hustler',          emoji: '💪', label: 'Hustler',          desc: 'Reach 15 prospects',            color: 'from-purple-50 to-violet-50    border-purple-200', check: ({ p }) => p >= 15 },
-  { id: 'all_star',         emoji: '🌟', label: 'All-Star',         desc: 'Reach 25 prospects',            color: 'from-yellow-50 to-amber-50     border-yellow-200', check: ({ p }) => p >= 25 },
+  { id: 'first_contact',    emoji: '🌱', label: 'First Contact',    desc: 'Log your first prospect',       color: 'bg-navy-50 ring-navy-100',  check: ({ p }) => p >= 1  },
+  { id: 'on_the_board',     emoji: '📣', label: 'On the Board',     desc: 'Reach 5 prospects',             color: 'bg-navy-50 ring-navy-100',   check: ({ p }) => p >= 5  },
+  { id: 'hustler',          emoji: '💪', label: 'Hustler',          desc: 'Reach 15 prospects',            color: 'bg-navy-50 ring-navy-100', check: ({ p }) => p >= 15 },
+  { id: 'all_star',         emoji: '🌟', label: 'All-Star',         desc: 'Reach 25 prospects',            color: 'bg-navy-50 ring-navy-100', check: ({ p }) => p >= 25 },
   // Streak
-  { id: 'on_fire',          emoji: '🔥', label: 'On Fire',          desc: '7-day outreach streak',         color: 'from-orange-50 to-red-50       border-orange-200', check: ({ s }) => s >= 7  },
-  { id: 'inferno',          emoji: '🌋', label: 'Inferno',          desc: '14-day outreach streak',        color: 'from-red-50 to-rose-50         border-red-200',    check: ({ s }) => s >= 14 },
+  { id: 'on_fire',          emoji: '🔥', label: 'On Fire',          desc: '7-day outreach streak',         color: 'bg-crimson-50 ring-crimson-100', check: ({ s }) => s >= 7  },
+  { id: 'inferno',          emoji: '🌋', label: 'Inferno',          desc: '14-day outreach streak',        color: 'bg-crimson-50 ring-crimson-100',    check: ({ s }) => s >= 14 },
   // Enrollments
-  { id: 'closer',           emoji: '🏅', label: 'Closer',           desc: 'Get your first enrollment',     color: 'from-amber-50 to-yellow-50     border-amber-200',  check: ({ r }) => r >= 1  },
-  { id: 'double_down',      emoji: '✌️',  label: 'Double Down',      desc: 'Get 2 enrollments',             color: 'from-amber-50 to-orange-50     border-amber-200',  check: ({ r }) => r >= 2  },
-  { id: 'champion',         emoji: '🏆', label: 'Champion',         desc: 'Get 5 enrollments',             color: 'from-yellow-50 to-gold-50      border-yellow-300', check: ({ r }) => r >= 5  },
-  { id: 'legend',           emoji: '👑', label: 'Legend',           desc: 'Get 10 enrollments',            color: 'from-crimson-50 to-red-50      border-crimson-100',check: ({ r }) => r >= 10 },
+  { id: 'closer',           emoji: '🏅', label: 'Closer',           desc: 'Get your first enrollment',     color: 'bg-gold-50 ring-gold-100',  check: ({ r }) => r >= 1  },
+  { id: 'double_down',      emoji: '✌️',  label: 'Double Down',      desc: 'Get 2 enrollments',             color: 'bg-gold-50 ring-gold-100',  check: ({ r }) => r >= 2  },
+  { id: 'champion',         emoji: '🏆', label: 'Champion',         desc: 'Get 5 enrollments',             color: 'bg-gold-50 ring-gold-100', check: ({ r }) => r >= 5  },
+  { id: 'legend',           emoji: '👑', label: 'Legend',           desc: 'Get 10 enrollments',            color: 'bg-gold-50 ring-gold-100',check: ({ r }) => r >= 10 },
   // Methods
-  { id: 'email_master',     emoji: '📧', label: 'Email Master',     desc: 'Send your first email follow-up', color: 'from-sky-50 to-blue-50       border-sky-200',    check: ({ emails }) => emails >= 1 },
-  { id: 'social_butterfly', emoji: '🦋', label: 'Social Butterfly', desc: '10+ Instagram DMs sent',        color: 'from-pink-50 to-fuchsia-50    border-pink-200',   check: ({ dms }) => dms >= 10 },
+  { id: 'email_master',     emoji: '📧', label: 'Email Master',     desc: 'Send your first email follow-up', color: 'bg-violet-50 ring-violet-100',    check: ({ emails }) => emails >= 1 },
+  { id: 'social_butterfly', emoji: '🦋', label: 'Social Butterfly', desc: '10+ Instagram DMs sent',        color: 'bg-violet-50 ring-violet-100',   check: ({ dms }) => dms >= 10 },
 ];
 
 const RANKS = [
@@ -71,10 +72,23 @@ function daysSince(dateStr) {
 
 function followUpIndicator(days, status) {
   if (days === null || INACTIVE_STATUSES.includes(status)) return null;
-  if (days <= 3)  return { label: `${days}d ago`, color: 'bg-green-50 text-green-700 ring-1 ring-green-200' };
-  if (days <= 6)  return { label: `${days}d ago`, color: 'bg-gold-50 text-yellow-700 ring-1 ring-yellow-200' };
-  return { label: `${days}d — follow up!`, color: 'bg-red-50 text-red-600 ring-1 ring-red-200' };
+  const ago = days === 0 ? 'today' : `${days}d ago`;
+  if (days <= 3)  return { level: 'fresh', label: ago, color: 'bg-white text-ink-muted ring-gray-200' };
+  if (days <= 6)  return { level: 'soon',  label: ago, color: 'bg-amber-50 text-amber-700 ring-amber-200' };
+  return { level: 'due', label: `${days}d · follow up`, color: 'bg-crimson-50 text-crimson ring-crimson-200' };
 }
+
+function initialsOf(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? '?') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+}
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+}
+
+const fmtUsd = (n) => `$${(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
 function formatDate(str) {
   if (!str) return '—';
@@ -101,13 +115,13 @@ function fireConfetti(type = 'default') {
   if (type === 'referral') {
     // Gold burst for referral
     confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 },
-      colors: ['#D4A017', '#E8B420', '#FAF1CC', '#fff', '#A51C30'] });
+      colors: ['#B8892B', '#D4A63F', '#F4EAD2', '#fff', '#BD1F2E'] });
   } else {
     // Crimson + gold shower for milestone
     confetti({ particleCount: 80, angle: 60, spread: 70, origin: { x: 0 },
-      colors: ['#A51C30', '#D4A017', '#fff'] });
+      colors: ['#BD1F2E', '#B8892B', '#fff'] });
     confetti({ particleCount: 80, angle: 120, spread: 70, origin: { x: 1 },
-      colors: ['#A51C30', '#D4A017', '#fff'] });
+      colors: ['#BD1F2E', '#B8892B', '#fff'] });
   }
 }
 
@@ -282,7 +296,7 @@ export default function Dashboard() {
     const newOnes = earnedBadges.filter(id => !prevEarnedBadges.current.includes(id));
     if (newOnes.length > 0) {
       const badge = BADGES.find(b => b.id === newOnes[0]);
-      confetti({ particleCount: 160, spread: 120, origin: { y: 0.4 }, colors: ['#A51C30', '#D4A017', '#fff'] });
+      confetti({ particleCount: 160, spread: 120, origin: { y: 0.4 }, colors: ['#BD1F2E', '#B8892B', '#fff'] });
       setMilestone(`${badge.emoji} Badge unlocked: ${badge.label}!`);
       setTimeout(() => setMilestone(null), 4000);
     }
@@ -296,13 +310,20 @@ export default function Dashboard() {
     return grouped;
   }, [outreach, filterStatus, filterGrade]);
 
+  const allProspects = useMemo(() => groupByProspect(outreach), [outreach]);
+  const statusCounts = useMemo(() => {
+    const c = {};
+    for (const p of allProspects) c[p.latest.status] = (c[p.latest.status] || 0) + 1;
+    return c;
+  }, [allProspects]);
+
   const needFollowUpCount = useMemo(() =>
-    prospects.filter((p) => {
+    allProspects.filter((p) => {
       if (INACTIVE_STATUSES.includes(p.latest.status)) return false;
       const days = daysSince(p.latest.created_at);
       return days !== null && days >= 7;
     }).length,
-    [prospects]
+    [allProspects]
   );
 
   function handleEmailFollowUp(prospect) {
@@ -331,7 +352,7 @@ export default function Dashboard() {
     if (birdFlying) return;
     setBirdFlying(true);
 
-    const colors = ['#A51C30', '#D4A017', '#fff', '#FAE4E8'];
+    const colors = ['#BD1F2E', '#B8892B', '#fff', '#FBE4E6'];
     confetti({ particleCount: 80, spread: 100, origin: { y: 0.5 }, colors });
 
     const W = window.innerWidth, H = window.innerHeight;
@@ -575,7 +596,7 @@ export default function Dashboard() {
               width: 95,
               height: 95,
               objectFit: 'contain',
-              filter: 'drop-shadow(0 6px 18px rgba(165,28,48,0.4))',
+              filter: 'drop-shadow(0 6px 18px rgba(189,31,46,0.4))',
             }}
           />
         </div>

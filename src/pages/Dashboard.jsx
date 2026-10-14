@@ -111,7 +111,7 @@ function fireConfetti(type = 'default') {
   }
 }
 
-function buildMailto(prospect, user) {
+function buildGmailUrl(prospect, user) {
   const { latest } = prospect;
   const emails = [latest.student_email, latest.parent_email].filter(Boolean).join(',');
   if (!emails) return null;
@@ -133,7 +133,7 @@ function buildMailto(prospect, user) {
     `Ascend Speech & Debate Coach`
   );
 
-  return `mailto:${emails}?subject=${subject}&body=${body}`;
+  return `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(emails)}&su=${subject}&body=${body}`;
 }
 
 function groupByProspect(rows) {
@@ -155,10 +155,10 @@ function groupByProspect(rows) {
 export default function Dashboard() {
   const { user } = useAuth();
 
-  const [referrals,   setReferrals]   = useState(null);
-  const [outreach,    setOutreach]    = useState([]);
-  const [leader,      setLeader]      = useState(undefined);
-  const [loadingData, setLoadingData] = useState(true);
+  const [referrals,    setReferrals]    = useState(null);
+  const [outreach,     setOutreach]     = useState([]);
+  const [leaderboard,  setLeaderboard]  = useState([]);
+  const [loadingData,  setLoadingData]  = useState(true);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [form,        setForm]        = useState(EMPTY_FORM);
@@ -222,7 +222,7 @@ export default function Dashboard() {
       ]);
       setReferrals(refData);
       setOutreach(outData);
-      setLeader(leaderData);
+      setLeaderboard(Array.isArray(leaderData) ? leaderData : []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -305,35 +305,11 @@ export default function Dashboard() {
     [prospects]
   );
 
-  async function handleEmailFollowUp(prospect) {
-    const mailto = buildMailto(prospect, user);
+  function handleEmailFollowUp(prospect) {
+    const mailto = buildGmailUrl(prospect, user);
     if (!mailto) return;
-
-    // Open mail client
-    window.location.href = mailto;
-
-    // Auto-log the email interaction — carry contact fields forward so button stays visible
-    try {
-      const entry = await api.post('/api/coach/outreach', {
-        prospect_id:    prospect.prospect_id,
-        contact_name:   prospect.latest.contact_name,
-        contact_method: 'Email',
-        status:         prospect.latest.status,
-        notes:          'Follow-up email sent',
-        grade:          prospect.latest.grade         || '',
-        school:         prospect.latest.school        || '',
-        student_email:  prospect.latest.student_email || '',
-        student_phone:  prospect.latest.student_phone || '',
-        parent_name:    prospect.latest.parent_name   || '',
-        parent_email:   prospect.latest.parent_email  || '',
-        parent_phone:   prospect.latest.parent_phone  || '',
-      });
-      setOutreach((prev) => [...prev, entry]);
-      setMilestone('📧 Email sent & logged!');
-      setTimeout(() => setMilestone(null), 3000);
-    } catch (err) {
-      console.error('Failed to log email interaction:', err);
-    }
+    // Open Gmail compose in a new tab
+    window.open(mailto, '_blank');
   }
 
   async function handleDeleteProspect() {
@@ -491,14 +467,26 @@ export default function Dashboard() {
     }
   }
 
-  const isLeader    = leader && user?.referral_code === leader.referral_code;
+  const todayStr    = new Date().toISOString().split('T')[0];
+  const loggedToday = outreach.some((e) => e.created_at?.split('T')[0] === todayStr);
+
+  const topCoach  = leaderboard[0];
+  const isLeader  = topCoach && topCoach.referral_count > 0 && user?.referral_code === topCoach.referral_code;
+  const myRank    = leaderboard.findIndex((c) => c.referral_code === user?.referral_code) + 1;
+
   const rank        = getRank(prospectCount);
   const nextRank    = getNextRank(prospectCount);
   const rankProgress = getRankProgress(prospectCount);
   const motivation  = (() => {
-    if (isLeader && prospectCount > 0) return "You're the #1 recruiter right now. Don't let anyone catch you! 👑";
-    if (streak >= 7)                   return `${streak}-day streak — you're absolutely on fire 🔥`;
-    if (needFollowUpCount >= 4)        return `${needFollowUpCount} prospects need a follow-up. Strike while it's hot! 📣`;
+    if (isLeader && (referrals?.total ?? 0) > 0) return "You're the #1 recruiter right now. Don't let anyone catch you! 👑";
+    if (myRank > 1 && leaderboard.length > 1) {
+      const ahead = leaderboard[myRank - 2];
+      const gap   = ahead.referral_count - (referrals?.total ?? 0);
+      if (gap <= 2 && gap > 0) return `Only ${gap} enrollment${gap !== 1 ? 's' : ''} behind #${myRank - 1}. Push! 🔥`;
+    }
+    if (streak >= 7)        return `${streak}-day streak — you're absolutely on fire 🔥`;
+    if (needFollowUpCount >= 4) return `${needFollowUpCount} prospects need a follow-up. Strike while it's hot! 📣`;
+    if (!loggedToday)       return "You haven't logged anyone today. One prospect can change everything! 🎯";
     if (nextRank) {
       const n = nextRank.min - prospectCount;
       return `${n} more prospect${n !== 1 ? 's' : ''} to reach ${nextRank.emoji} ${nextRank.label}!`;
@@ -662,45 +650,35 @@ export default function Dashboard() {
             <p className="text-sm text-gray-500 mt-1">{motivation}</p>
           </div>
         </div>
-        {streak > 0 && (
-          <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 px-4 py-2 rounded-xl shrink-0">
-            <span className="text-xl">🔥</span>
+        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+          {/* Daily goal pill */}
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+            loggedToday
+              ? 'bg-green-50 border-green-200'
+              : 'bg-gray-50 border-gray-200'
+          }`}>
+            <span className="text-lg">{loggedToday ? '✅' : '📋'}</span>
             <div>
-              <p className="text-sm font-bold text-orange-700">{streak} day streak</p>
-              <p className="text-xs text-orange-400">Keep logging outreach!</p>
+              <p className={`text-sm font-bold leading-tight ${loggedToday ? 'text-green-700' : 'text-gray-700'}`}>
+                {loggedToday ? 'Daily goal done!' : 'Daily goal: 0/1'}
+              </p>
+              <p className={`text-xs ${loggedToday ? 'text-green-400' : 'text-gray-400'}`}>
+                Log 1 prospect today
+              </p>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Leaderboard Banner */}
-      {leader && (
-        <div className={`mb-6 rounded-2xl p-5 flex items-center gap-4 shadow-sm ${
-          isLeader
-            ? 'bg-gradient-to-r from-crimson to-crimson-light text-white'
-            : 'bg-white border border-gray-100'
-        }`}>
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${
-            isLeader ? 'bg-white/20' : 'bg-gold-50'
-          }`}>
-            🏆
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className={`text-xs font-semibold uppercase tracking-wide mb-0.5 ${isLeader ? 'text-white/60' : 'text-gray-400'}`}>
-              {isLeader ? 'You\'re the leader!' : 'Current Leader'}
-            </p>
-            <p className={`font-bold text-lg leading-tight ${isLeader ? 'text-white' : 'text-gray-900'}`}>
-              {leader.first_name} {leader.last_name}
-            </p>
-          </div>
-          <div className="text-right shrink-0">
-            <p className={`text-3xl font-bold tabular-nums ${isLeader ? 'text-white' : 'text-crimson'}`}>
-              {leader.referral_count}
-            </p>
-            <p className={`text-xs ${isLeader ? 'text-white/60' : 'text-gray-400'}`}>referrals enrolled</p>
-          </div>
+          {/* Streak pill */}
+          {streak > 0 && (
+            <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 px-3 py-2 rounded-xl">
+              <span className="text-lg">🔥</span>
+              <div>
+                <p className="text-sm font-bold text-orange-700">{streak} day streak</p>
+                <p className="text-xs text-orange-400">Keep it up!</p>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Camp Countdown */}
       {countdown && (
@@ -741,9 +719,9 @@ export default function Dashboard() {
       )}
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
         {/* Referral Code */}
-        <div className="card p-5 shadow-sm">
+        <div className="card p-5 shadow-sm col-span-2 lg:col-span-1">
           <div className="flex items-start justify-between mb-3">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Your Referral Code</p>
             <div className="w-8 h-8 rounded-lg bg-crimson-50 flex items-center justify-center">
@@ -764,7 +742,27 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* Conversions */}
+        {/* Earnings — headline stat in gold */}
+        <div className="card p-5 shadow-sm bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200">
+          <div className="flex items-start justify-between mb-3">
+            <p className="text-xs font-semibold text-yellow-600 uppercase tracking-wide">You've Earned</p>
+            <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center">
+              <span className="text-base">💰</span>
+            </div>
+          </div>
+          <div className="flex items-end gap-1 mb-1">
+            <span className="text-3xl font-bold text-yellow-600 tabular-nums">
+              {loadingData ? '—' : `$${(referrals?.earned_dollars ?? 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+            </span>
+          </div>
+          <p className="text-xs text-yellow-600/70">
+            {loadingData ? '' : referrals?.balance_dollars > 0
+              ? `$${referrals.balance_dollars.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} available to redeem`
+              : 'Keep recruiting to earn more!'}
+          </p>
+        </div>
+
+        {/* Enrolled */}
         <div className="card p-5 shadow-sm">
           <div className="flex items-start justify-between mb-3">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Enrolled</p>
@@ -778,7 +776,7 @@ export default function Dashboard() {
             <span className="text-3xl font-bold text-gold tabular-nums">{loadingData ? '—' : referrals?.total ?? 0}</span>
             <span className="text-gray-400 text-sm mb-1">students</span>
           </div>
-          <p className="text-xs text-gray-400">Signed up using your referral code.</p>
+          <p className="text-xs text-gray-400">Signed up using your code.</p>
         </div>
 
         {/* Follow-up */}
@@ -804,6 +802,7 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+
 
       {/* Prospects Panel */}
       <div className="card shadow-sm overflow-hidden">
@@ -1244,8 +1243,7 @@ export default function Dashboard() {
               return (
                 <div
                   key={badge.id}
-                  title={badge.desc}
-                  className={`relative flex flex-col items-center text-center p-3 rounded-xl border transition-all ${
+                  className={`group relative flex flex-col items-center text-center p-3 rounded-xl border transition-all ${
                     earned
                       ? `bg-gradient-to-b ${badge.color} shadow-sm`
                       : 'bg-gray-50 border-gray-100'
@@ -1265,6 +1263,16 @@ export default function Dashboard() {
                       </svg>
                     </span>
                   )}
+                  {/* Hover tooltip */}
+                  <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 hidden group-hover:flex flex-col items-center">
+                    <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-xl max-w-[160px] text-center">
+                      {earned
+                        ? <span className="text-green-400 font-semibold">✓ Earned!</span>
+                        : <span>{badge.desc}</span>
+                      }
+                    </div>
+                    <div className="w-2 h-2 bg-gray-900 rotate-45 -mt-1" />
+                  </div>
                 </div>
               );
             })}

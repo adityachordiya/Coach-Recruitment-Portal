@@ -15,41 +15,44 @@ module.exports = async function handler(req, res) {
 
   const pool = getPool();
   try {
-    // Get all coaches with their referral codes
+    // Get all coaches with outreach counts
     const { rows: coaches } = await pool.query(`
-      SELECT r.first_name, r.last_name, r.referral_code
+      SELECT r.first_name, r.last_name, r.referral_code,
+             COUNT(DISTINCT col.id) AS outreach_count
       FROM coach_accounts ca
       JOIN referrers r ON ca.referrer_id = r.id
-      WHERE ca.role = 'coach'
+      LEFT JOIN coach_outreach_log col ON col.coach_id = r.id
+      GROUP BY ca.id, r.id
     `);
 
-    if (coaches.length === 0) return res.status(200).json(null);
+    if (coaches.length === 0) return res.status(200).json([]);
 
     // Pull live referral data
-    const data = await fetchReferralData();
-
-    // Find the coach with the most conversions
-    let leader = null;
-    let maxCount = 0;
-
-    for (const coach of coaches) {
-      const stats = getReferrerStats(data, coach.referral_code);
-      const count = stats?.stats.redemption_count ?? 0;
-      if (count > maxCount) {
-        maxCount = count;
-        leader = {
-          first_name: coach.first_name,
-          last_name: coach.last_name,
-          referral_code: coach.referral_code,
-          referral_count: count,
-        };
-      }
+    let refData = null;
+    try {
+      refData = await fetchReferralData();
+    } catch (err) {
+      console.error('Could not fetch referral data for leaderboard:', err.message);
     }
 
-    // Only show a leader if at least one coach has a conversion
-    if (!leader || leader.referral_count === 0) return res.status(200).json(null);
+    // Build ranked list — primary sort: referral_count DESC, secondary: outreach_count DESC
+    const ranked = coaches
+      .map((coach) => {
+        const stats = refData ? getReferrerStats(refData, coach.referral_code) : null;
+        return {
+          first_name:     coach.first_name,
+          last_name:      coach.last_name,
+          referral_code:  coach.referral_code,
+          referral_count: stats?.stats.redemption_count ?? 0,
+          outreach_count: parseInt(coach.outreach_count, 10),
+        };
+      })
+      .sort((a, b) =>
+        b.referral_count - a.referral_count ||
+        b.outreach_count - a.outreach_count
+      );
 
-    return res.status(200).json(leader);
+    return res.status(200).json(ranked);
   } catch (err) {
     console.error('GET /coach/leaderboard error:', err);
     return res.status(500).json({ error: 'Internal server error' });

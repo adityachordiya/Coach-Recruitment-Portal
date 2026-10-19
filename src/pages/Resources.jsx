@@ -3,15 +3,31 @@ import Layout from '../components/Layout';
 import { useAuth } from '../lib/AuthContext';
 
 const SECTIONS = [
-  { id: 'about',     label: 'About Ascend' },
-  { id: 'different', label: 'What Makes Us Different' },
-  { id: 'strategy',  label: 'Recruiting Strategy' },
-  { id: 'scripts',   label: 'Sample Scripts' },
-  { id: 'messages',  label: 'Core Messages' },
-  { id: 'pricing',   label: 'Pricing' },
-  { id: 'financial', label: 'Financial Aid' },
-  { id: 'safety',    label: 'Safety' },
-  { id: 'faq',       label: 'FAQ' },
+  { id: 'about',      label: 'About Ascend' },
+  { id: 'programs',   label: 'Every Camp Counts' },
+  { id: 'different',  label: 'What Makes Us Different' },
+  { id: 'strategy',   label: 'Recruiting Strategy' },
+  { id: 'scripts',    label: 'Sample Scripts' },
+  { id: 'objections', label: 'Handling Objections' },
+  { id: 'messages',   label: 'Core Messages' },
+  { id: 'pricing',    label: 'Pricing' },
+  { id: 'financial',  label: 'Financial Aid' },
+  { id: 'safety',     label: 'Safety' },
+  { id: 'logistics',  label: 'Logistics & Policies' },
+  { id: 'faq',        label: 'FAQ' },
+];
+
+const CALENDLY = 'https://calendly.com/ascend-info/info-call';
+
+// What coaches hear most, and an honest answer to each. Facts from
+// ascendspeech.org (2027 season); no aid amounts, those are Ascend's to quote.
+const OBJECTIONS = [
+  { heard: 'It\'s too expensive.', say: 'Lead with the $50 your code saves, then the cheaper ways in: the 1-week commuter is $1,999.99 and Ascend Online starts at $699.99. The two-summer package works out to about $3,250 a summer. If cost is a real barrier, financial aid is available and nobody with genuine need has been turned away; send the family to info@ascendspeech.org. Never quote an aid amount yourself.' },
+  { heard: 'I\'m new. I\'m not good enough yet.', say: 'Ascend places every student in one of four labs by level, from first speech to national circuit, and every student works with every coach. There is a Novice track at both California and Florida. Many of the most improved campers started with little experience.' },
+  { heard: 'California is too far.', say: 'Over 60% of Ascend California students come from outside California. Sacramento (SMF) has direct flights from dozens of cities, and a $60 shuttle runs from the airport on arrival day. East Coast families can do Ascend Florida at Lynn University, June 25 – July 9, and anyone can do Ascend Online.' },
+  { heard: 'Is it safe? Who watches the kids?', say: 'Students are supervised around the clock with nightly room checks, have 24/7 access to a medical authority alongside the university\'s public safety department, and all staff are background checked. Offer the parent a call with Ascend for anything more specific.' },
+  { heard: 'We have a conflict this summer.', say: 'The 1-week options run July 11–18, so half the summer stays free. If plans change after registering, families can defer to the next summer by May 31 (there are no refunds), which takes the risk out of registering early.' },
+  { heard: 'My parents need to be convinced.', say: 'Send the parent message from Sample Scripts, or have the family book a short call with the Ascend team (https://calendly.com/ascend-info/info-call). Parents decide, and a call answers their questions better than a forwarded text.' },
 ];
 
 export default function Resources() {
@@ -97,7 +113,7 @@ export default function Resources() {
                 { icon: '📅', label: 'Dates', value: 'July 11–25, 2027 (1-week options July 11–18)' },
                 { icon: '✈️', label: 'Nearest Airport', value: 'Sacramento International (SMF) — campus transport available' },
                 { icon: '🎓', label: 'Target Grade', value: 'Entering 6th–12th grade in fall 2027' },
-                { icon: '📚', label: 'Post-Camp', value: 'Free Ascend Academy group coaching September–June, plus Sandel Academy private coaching' },
+                { icon: '📚', label: 'Post-Camp', value: 'Free Ascend Academy group coaching September–June, every year until high school graduation' },
                 { icon: '💰', label: 'Financial Aid', value: 'Available for students with demonstrated need — no one turned away' },
               ].map((item) => (
                 <div key={item.label} className="bg-white border border-black/[0.07] rounded-xl p-4">
@@ -113,18 +129,45 @@ export default function Resources() {
             </div>
           </Section>
 
+          {/* Every camp counts */}
+          <Section id="programs" title="Every Camp Counts">
+            <p className="text-gray-600 mb-5">
+              Your code works on every Ascend summer program, and you get credit for each one. Last season, coach codes brought in
+              students for California, Florida and Online. If a student can't make California, point them to the camp that fits.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {[
+                { name: 'Ascend California', tag: 'Flagship', when: 'July 11–25, 2027', where: 'University of the Pacific, Stockton CA', price: 'From $1,999.99', note: 'The most Congress coaches of any camp. 1- and 2-week, residential or commuter, plus a Novice track.' },
+                { name: 'Ascend Florida', tag: 'East Coast', when: 'June 25 – July 9, 2027', where: 'Lynn University, South Florida', price: 'Same packages as California', note: 'The same curriculum and coaching, closer to home for East Coast families. Novice track too.' },
+                { name: 'Ascend Online', tag: 'From anywhere', when: 'June 26 – July 10, 2027', where: 'Online', price: '1 week $699.99 · 2 weeks $999.99', note: 'For students who can\'t travel. In person is still the stronger experience when it\'s possible.' },
+              ].map((c) => (
+                <div key={c.name} className="card p-4 flex flex-col">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-display text-lg font-semibold text-ink">{c.name}</p>
+                    <span className="badge bg-navy-50 text-navy ring-navy-100">{c.tag}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-ink mt-2">{c.when}</p>
+                  <p className="text-xs text-ink-muted">{c.where}</p>
+                  <p className="text-sm text-gray-600 mt-3 leading-relaxed flex-1">{c.note}</p>
+                  <p className="text-sm font-semibold text-crimson mt-3">{c.price}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-3">Dates and prices from ascendspeech.org. Families register at ascendspeech.org/ascend-store with your code.</p>
+          </Section>
+
           {/* What Makes Us Different */}
           <Section id="different" title="What Makes Ascend Different">
             <p className="text-gray-600 mb-5">When you're recruiting, you need to answer the question: <em>why Ascend?</em></p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                { icon: '🏆', title: 'Unmatched Track Record', desc: 'The largest Congress camp in the country with the most success on the national circuit — no other camp matches our results.' },
+                { icon: '🏆', title: 'Unmatched Track Record', desc: 'Every TOC Congress champion this decade has been part of Team Ascend: Rohit Jhawar (2020), Andrew Sun (2021), Anish Beeram (2022), Tyler Luu (2023), Fadhil Lawal (2024), Swathi Bodduluri (2025) and Serena Guo (2026).' },
                 { icon: '🧑‍🏫', title: 'Top-Tier Coaches', desc: 'Champions and coaches of champions from across the country — diverse perspectives for every level of student.' },
                 { icon: '🎬', title: 'Daily Mock Rounds', desc: 'At least one (sometimes two) mock rounds daily in a tournament-like setting, with feedback tied directly to what\'s being taught.' },
-                { icon: '📚', title: 'Year-Round Learning', desc: 'Free Ascend Academy group coaching runs September through June, and Sandel Academy offers private coaching during the school year — so growth never stops.' },
-                { icon: '🤝', title: 'Individualized Coaching', desc: 'Students get dedicated one-on-one coaching during camp — and Ascend is increasing it more this year than any previous year.' },
+                { icon: '📚', title: 'Year-Round Learning', desc: 'Free Ascend Academy group coaching runs September through June, every year until high school graduation. Sandel Academy (by application) offers private coaching during the school year.' },
+                { icon: '🤝', title: 'Individualized Coaching', desc: 'Coaches take a personalized approach to each student\'s growth through the Quest 4 Success curriculum, and the 1-on-1 package adds dedicated private sessions (limited to 10 students).' },
                 { icon: '🗺️', title: 'Regional Specialization', desc: 'Coaches from across the country ensure success on both the national circuit and in local leagues, wherever a student competes.' },
-                { icon: '🛡️', title: 'Dedicated Safety Team', desc: 'A dedicated administrative team focused entirely on student safety — they don\'t coach, their only job is student care.' },
+                { icon: '🛡️', title: 'Safety First', desc: 'Constant supervision, nightly room checks, 24/7 access to a medical authority and background-checked staff.' },
                 { icon: '📋', title: 'Tailored Curriculum', desc: 'Curriculum is tailored to each student based on their lab placement, so every student works on what matters most for their development.' },
                 { icon: '🌎', title: 'National Community', desc: 'Ascend is the largest Congressional Debate community in the country, with students competing together all year long.' },
               ].map((item) => (
@@ -226,6 +269,35 @@ export default function Resources() {
                 labelColor="bg-blue-100 text-blue-800"
                 script={`"Hey [name], hope you're doing well! I'm going to be coaching at Ascend this summer and I'd love to see you there. It's the best camp in the country for Congress and I think it would be a great experience for you to really take the next step with your Congress career by working with some great coaches. If you're interested or have any questions, let me know and I'd be happy to share more! My referral code is ${code} — use it at registration for $50 off."`}
               />
+              <ScriptCard
+                label="To a Parent"
+                labelColor="bg-navy-50 text-navy"
+                script={`"Hi [parent name], this is [your name]. I coach Congressional Debate at Ascend Speech & Debate, and I've seen how hard [student] works. I think our summer camp would be a great fit: it's the largest Congress camp in the country, and every TOC Congress champion this decade has trained with us. If you'd like to talk it through, you can book a short call with the Ascend team here: ${CALENDLY}. And if you register, my code ${code} saves your family $50."`}
+              />
+              <ScriptCard
+                label="Follow-Up (no reply yet)"
+                labelColor="bg-amber-50 text-amber-800"
+                script={`"Hey [name], just circling back on Ascend. No pressure at all, I just didn't want it to get lost. Happy to answer anything, or I can connect your family with the Ascend team. My code ${code} is still good for $50 off whenever you're ready."`}
+              />
+              <ScriptCard
+                label="Hand-Off to Ascend (they're interested)"
+                labelColor="bg-violet-50 text-violet-800"
+                script={`"So glad you're interested! The easiest next step is a quick call with the Ascend team. They can answer questions about labs, travel, financial aid, anything. Pick a time here: ${CALENDLY}. When you register, use my code ${code} for $50 off."`}
+              />
+              <p className="text-xs text-gray-400">After the hand-off, log the prospect as <span className="font-semibold text-gray-500">Connected with Ascend Admin</span> on your dashboard.</p>
+            </div>
+          </Section>
+
+          {/* Handling objections */}
+          <Section id="objections" title="Handling Objections">
+            <p className="text-gray-600 mb-5">Most "no"s are really "not yet" or "I have a question." Here's what to say to the ones you'll hear most.</p>
+            <div className="space-y-3">
+              {OBJECTIONS.map((o) => (
+                <div key={o.heard} className="card p-4">
+                  <p className="font-semibold text-ink text-sm">"{o.heard}"</p>
+                  <p className="text-sm text-gray-600 mt-2 leading-relaxed">{o.say}</p>
+                </div>
+              ))}
             </div>
           </Section>
 
@@ -236,8 +308,8 @@ export default function Resources() {
               {[
                 'Ascend is the largest Congress camp in the country, with the strongest track record on the national circuit and the most success at the TOC.',
                 'Every student gets a tailored curriculum built around their specific needs — Ascend meets students where they are and builds a plan to take them further.',
-                'Students get dedicated one-on-one coaching during camp — and Ascend will be increasing it more this year than any other previous year.',
-                'Growth doesn\'t stop at camp. Free Ascend Academy group coaching runs September through June, keeping students improving all season.',
+                'Every TOC Congress champion this decade, 2020 through 2026, has been part of Team Ascend. Name them: it lands harder than any adjective.',
+                'Growth doesn\'t stop at camp. Free Ascend Academy group coaching runs September through June, every year until graduation.',
                 'Ascend has the best coaching staff in the country and there isn\'t a close second.',
                 `Share your referral code (${code}) — students get $50 off and you get full credit for the referral.`,
                 'Financial aid is available for students with genuine need — no deserving student has ever been turned away.',
@@ -325,12 +397,11 @@ export default function Resources() {
             </p>
             <div className="space-y-2">
               {[
-                'Students are supervised at all times throughout the program — day and night.',
+                'Students are constantly supervised throughout the program, day and night.',
                 'Nightly room checks are conducted by staff members.',
-                'A dedicated nurse is available throughout camp to address any health needs.',
-                'Parents can reach Ascend leadership at any time through a dedicated 24/7 contact line.',
+                'A medical authority is available 24/7, alongside the university\'s 24/7 public safety department.',
                 'Ascend maintains and enforces a clear Code of Conduct to ensure a respectful, inclusive environment.',
-                'All Ascend staff are vetted and trained on student safety protocols before camp begins.',
+                'All staff are background checked per California State Law.',
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-2 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg px-4 py-3">
                   <span className="text-green-500 mt-0.5">✓</span>
@@ -345,6 +416,26 @@ export default function Resources() {
             </p>
           </Section>
 
+          {/* Logistics */}
+          <Section id="logistics" title="Logistics & Policies">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { label: 'Who can attend', value: 'Students entering 6th–12th grade in fall 2027.' },
+                { label: 'Getting there (California)', value: 'Fly into Sacramento (SMF). Arrive July 11 between 9am and 3pm; a shuttle runs that day for $60 each way.' },
+                { label: 'Going home', value: '1-week campers leave July 18 (no shuttle). 2-week campers leave July 25, with a shuttle for flights after 10am.' },
+                { label: 'Refunds and deferrals', value: 'No refunds, but a family can defer to the next summer by May 31 if a conflict comes up.' },
+                { label: 'Families with questions', value: 'Email info@ascendspeech.org or book a call with the Ascend team.' },
+                { label: 'How you get credit', value: 'The family enters your code at checkout. No code, no credit, so always share it. Your dashboard shows each enrollment and what you\'re owed.' },
+              ].map((item) => (
+                <div key={item.label} className="bg-white border border-black/[0.07] rounded-xl p-4">
+                  <p className="eyebrow">{item.label}</p>
+                  <p className="text-sm text-gray-700 mt-1 leading-relaxed">{item.value}</p>
+                </div>
+              ))}
+            </div>
+            <a href={CALENDLY} target="_blank" rel="noreferrer" className="btn-outline text-sm px-4 py-2 mt-4">Ascend's call-booking page (share with families)</a>
+          </Section>
+
           {/* FAQ */}
           <Section id="faq" title="Frequently Asked Questions">
             <p className="text-gray-600 mb-5">These are the questions prospective students and families most often ask. Know these answers — or direct them to Ascend leadership if you're unsure.</p>
@@ -352,7 +443,7 @@ export default function Resources() {
               {[
                 {
                   q: 'How does Ascend approach teaching students at different levels?',
-                  a: 'Ascend offers six different labs that vary by complexity. Before camp, each student submits a recording of themselves giving a Congress speech and an evaluation form. A panel of coaches reviews these to assess each student\'s strengths, weaknesses, and needs, then assigns them to a lab tailored to their skill level. During the first two days, coaches may also recommend a lab adjustment if a better fit is identified. Every student is guaranteed an opportunity to work with every Ascend coach regardless of lab placement.',
+                  a: 'Ascend offers four labs that vary by complexity. Before camp, each student submits a recording of themselves giving a Congress speech and an evaluation form. A panel of coaches reviews these to assess each student\'s strengths, weaknesses, and needs, then assigns them to a lab tailored to their skill level. During the first two days, coaches may also recommend a lab adjustment if a better fit is identified. Every student is guaranteed an opportunity to work with every Ascend coach regardless of lab placement.',
                 },
                 {
                   q: 'I\'m new to Congressional Debate — is Ascend the right program for me?',
@@ -360,7 +451,7 @@ export default function Resources() {
                 },
                 {
                   q: 'Should my student do Ascend California, Ascend Florida, or Ascend Online?',
-                  a: 'Ascend California is the flagship summer experience and has the most Congressional Debate coaches of any camp in the country. If a student is able to attend either in-person camp, Ascend strongly recommends doing so. The in-person experience — daily mock rounds, one-on-one sessions, community, and full immersion — is significantly more impactful than an online format. Ascend Online is a great option for students who cannot travel, but in-person is the gold standard.',
+                  a: 'Ascend California is the flagship summer experience and has the most Congressional Debate coaches of any camp in the country. If a student is able to attend either in-person camp, Ascend strongly recommends doing so. The in-person experience — daily mock rounds, one-on-one sessions, community, and full immersion — is significantly more impactful than an online format. Ascend Florida (June 25 – July 9, 2027, Lynn University) brings the same program to the East Coast, and Ascend Online (June 26 – July 10, from $699.99) is a great option for students who cannot travel, but in-person is the gold standard.',
                 },
               ].map((item) => (
                 <FAQItem key={item.q} question={item.q} answer={item.a} />

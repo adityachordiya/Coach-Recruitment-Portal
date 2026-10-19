@@ -80,6 +80,7 @@ const FOLLOW_UP_RULES = {
 };
 
 const STORE_URL = 'https://www.ascendspeech.org/ascend-store';
+const CALENDLY_URL = 'https://calendly.com/ascend-info/info-call';
 
 // Ready-to-send messages for the share kit. Each leads with what the family
 // gets (the $50), not what the coach earns.
@@ -91,6 +92,8 @@ function shareTemplates(user) {
       `Hey! I'm coaching at Ascend this summer, the Congress camp I'd recommend to anyone serious about debate. If you're thinking about camp, my code ${code} saves your family $50: ${STORE_URL}\n\nHappy to answer anything!` },
     { id: 'text', label: 'Text to a parent', icon: 'phone', text:
       `Hi, this is ${me}. I coach Congressional Debate at Ascend Speech & Debate. I think your student would get a lot out of our summer camp, and the code ${code} saves your family $50 when you register: ${STORE_URL}\n\nGlad to answer any questions.` },
+    { id: 'handoff', label: 'Hand-off: book a call with Ascend', icon: 'calendar', text:
+      `So glad you're interested! The easiest next step is a quick call with the Ascend team. They can answer questions about labs, travel, financial aid, anything. Pick a time here: ${CALENDLY_URL}\n\nWhen you register, use my code ${code} for $50 off.` },
     { id: 'email', label: 'Email to a parent', icon: 'mail', subject: 'Ascend Speech & Debate this summer', text:
       `Hi,\n\nI'm ${me}, a coach at Ascend Speech & Debate. Ascend is the largest Congressional Debate camp in the country, and every TOC Congress champion this decade has been part of the program.\n\nIf your student is thinking about camp this summer, my code ${code} saves your family $50 at registration: ${STORE_URL}\n\nI'm happy to answer any questions, just reply here.\n\n${me}\nAscend Speech & Debate` },
   ];

@@ -18,7 +18,7 @@ export default function App() {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute coachOnly>
                 <Dashboard />
               </ProtectedRoute>
             }

@@ -22,10 +22,11 @@ module.exports = async function handler(req, res) {
          r.id AS referrer_id,
          r.first_name,
          r.last_name,
-         r.email,
+         COALESCE(r.email, ca.email) AS email,
          r.referral_code
        FROM coach_accounts ca
-       JOIN referrers r ON ca.referrer_id = r.id
+       -- Owners need no referrer row (they recruit nobody), so this is a LEFT JOIN.
+       LEFT JOIN referrers r ON ca.referrer_id = r.id
        WHERE ca.id = $1`,
       [payload.accountId]
     );

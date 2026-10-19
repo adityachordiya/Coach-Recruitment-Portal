@@ -21,7 +21,7 @@ export default function Layout({ children }) {
   }
 
   const initials = user
-    ? `${user.first_name?.[0] ?? ''}${user.last_name?.[0] ?? ''}`.toUpperCase()
+    ? (`${user.first_name?.[0] ?? ''}${user.last_name?.[0] ?? ''}` || user.email?.[0] || '?').toUpperCase()
     : '?';
 
   function launchMascot() {
@@ -100,7 +100,7 @@ export default function Layout({ children }) {
                 style={{ transition: 'transform 0.15s, opacity 0.2s' }}
               />
             </button>
-            <Link to="/dashboard" className="flex items-baseline gap-2">
+            <Link to={user?.referral_code ? '/dashboard' : '/admin'} className="flex items-baseline gap-2">
               <span className="font-display text-[21px] font-semibold text-ink leading-none tracking-tight">Ascend</span>
               <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-[0.12em] text-crimson">Coach Portal</span>
             </Link>
@@ -108,7 +108,7 @@ export default function Layout({ children }) {
 
           {/* Tabs */}
           <div className="hidden sm:flex items-stretch gap-1 h-full">
-            <NavLink to="/dashboard" active={location.pathname === '/dashboard'}>Dashboard</NavLink>
+            {user?.referral_code && <NavLink to="/dashboard" active={location.pathname === '/dashboard'}>Dashboard</NavLink>}
             <NavLink to="/resources" active={location.pathname === '/resources'}>Playbook</NavLink>
             {user?.role === 'owner' && (
               <NavLink to="/admin" active={location.pathname === '/admin'}>Admin</NavLink>
@@ -122,8 +122,8 @@ export default function Layout({ children }) {
                 <span className="text-white text-[11px] font-bold tracking-wide">{initials}</span>
               </div>
               <div className="leading-tight">
-                <p className="text-sm font-semibold text-ink">{user?.first_name} {user?.last_name}</p>
-                <p className="text-[11px] text-ink-muted font-mono">{user?.referral_code}</p>
+                <p className="text-sm font-semibold text-ink">{user?.first_name ? `${user.first_name} ${user.last_name ?? ''}` : user?.email}</p>
+                <p className="text-[11px] text-ink-muted font-mono">{user?.referral_code || 'Owner'}</p>
               </div>
             </div>
             <button
@@ -152,11 +152,11 @@ export default function Layout({ children }) {
                 <span className="text-white text-[11px] font-bold">{initials}</span>
               </div>
               <div className="leading-tight">
-                <p className="text-sm font-semibold text-ink">{user?.first_name} {user?.last_name}</p>
-                <p className="text-[11px] text-ink-muted font-mono">{user?.referral_code}</p>
+                <p className="text-sm font-semibold text-ink">{user?.first_name ? `${user.first_name} ${user.last_name ?? ''}` : user?.email}</p>
+                <p className="text-[11px] text-ink-muted font-mono">{user?.referral_code || 'Owner'}</p>
               </div>
             </div>
-            <MobileNavLink to="/dashboard" active={location.pathname === '/dashboard'} onClick={() => setMenuOpen(false)}>Dashboard</MobileNavLink>
+            {user?.referral_code && <MobileNavLink to="/dashboard" active={location.pathname === '/dashboard'} onClick={() => setMenuOpen(false)}>Dashboard</MobileNavLink>}
             <MobileNavLink to="/resources" active={location.pathname === '/resources'} onClick={() => setMenuOpen(false)}>Playbook</MobileNavLink>
             {user?.role === 'owner' && (
               <MobileNavLink to="/admin" active={location.pathname === '/admin'} onClick={() => setMenuOpen(false)}>Admin</MobileNavLink>

@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 
-export default function ProtectedRoute({ children, ownerOnly = false }) {
+export default function ProtectedRoute({ children, ownerOnly = false, coachOnly = false }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -15,6 +15,8 @@ export default function ProtectedRoute({ children, ownerOnly = false }) {
 
   if (!user) return <Navigate to="/login" replace />;
   if (ownerOnly && user.role !== 'owner') return <Navigate to="/dashboard" replace />;
+  // An owner account with no referral code recruits nobody, so it has no coach dashboard.
+  if (coachOnly && !user.referral_code) return <Navigate to={user.role === 'owner' ? '/admin' : '/login'} replace />;
 
   return children;
 }

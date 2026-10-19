@@ -26,17 +26,20 @@ module.exports = async function handler(req, res) {
       [email.toLowerCase().trim()]
     );
 
-    if (referrerResult.rows.length === 0) {
+    // Coaches must be on the referrers list (Ascend OS → Referral Management),
+    // since their code is what credits enrollments. Owners need not be.
+    if (referrerResult.rows.length === 0 && role !== 'owner') {
       return res.status(404).json({
-        error: 'No active referrer found with that email. Add them to the referrers table first.',
+        error: 'No active referrer with that email. Add them in Ascend OS → Referral Management first.',
       });
     }
 
-    const referrer = referrerResult.rows[0];
+    const referrer = referrerResult.rows[0] || null;
+    const normalizedEmail = email.toLowerCase().trim();
 
     const existingResult = await pool.query(
-      `SELECT id, password_hash FROM coach_accounts WHERE referrer_id = $1`,
-      [referrer.id]
+      `SELECT id, password_hash FROM coach_accounts WHERE email = $1 OR ($2::uuid IS NOT NULL AND referrer_id = $2)`,
+      [normalizedEmail, referrer?.id ?? null]
     );
 
     const inviteToken = crypto.randomBytes(32).toString('hex');
@@ -57,7 +60,7 @@ module.exports = async function handler(req, res) {
       await pool.query(
         `INSERT INTO coach_accounts (referrer_id, email, role, invite_token, invite_token_expires_at)
          VALUES ($1, $2, $3, $4, $5)`,
-        [referrer.id, email.toLowerCase().trim(), role, inviteToken, expiresAt]
+        [referrer?.id ?? null, normalizedEmail, role, inviteToken, expiresAt]
       );
     }
 
@@ -74,7 +77,7 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         sender: { name: 'Ascend Speech & Debate', email: 'noreply@ascendspeech.org' },
-        to: [{ email, name: `${referrer.first_name} ${referrer.last_name}` }],
+        to: [{ email, name: referrer ? `${referrer.first_name} ${referrer.last_name}` : email }],
         subject: "You're invited to the Ascend Coach Portal",
         htmlContent: `
           <div style="font-family: Inter, system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; color: #111;">
@@ -82,7 +85,7 @@ module.exports = async function handler(req, res) {
               <span style="font-size: 20px; font-weight: 700; color: #A51C30;">Ascend</span>
               <span style="font-size: 20px; font-weight: 400; color: #111;"> Coach Portal</span>
             </div>
-            <h2 style="font-size: 22px; font-weight: 600; margin: 0 0 12px;">Hey ${referrer.first_name}!</h2>
+            <h2 style="font-size: 22px; font-weight: 600; margin: 0 0 12px;">Hey ${referrer ? referrer.first_name : 'there'}!</h2>
             <p style="font-size: 16px; line-height: 1.6; margin: 0 0 24px; color: #444;">
               You've been invited to join the Ascend Coach Portal, where you can track your referrals and outreach activity.
             </p>
